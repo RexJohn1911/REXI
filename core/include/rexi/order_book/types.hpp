@@ -74,6 +74,7 @@ enum class OrderBookStatus : uint8_t {
     InvalidSnapshot = 10,
     LevelNotFound = 11,
     InvalidMessageType = 12,
+    PoolExhausted = 13,
 };
 
 [[nodiscard]] constexpr std::string_view to_string(OrderBookStatus status) noexcept {
@@ -104,9 +105,20 @@ enum class OrderBookStatus : uint8_t {
             return "LevelNotFound";
         case OrderBookStatus::InvalidMessageType:
             return "InvalidMessageType";
+        case OrderBookStatus::PoolExhausted:
+            return "PoolExhausted";
     }
     return "Unknown";
 }
+
+/**
+ * @brief Configuration parameters for OrderBook capacity and pool sizing.
+ */
+struct OrderBookConfig {
+    size_t initial_order_capacity{1024};
+    size_t max_order_capacity{1024};
+    bool allow_pool_growth{false};
+};
 
 /**
  * @brief Policy determining behavior when an incoming order or update crosses the book.

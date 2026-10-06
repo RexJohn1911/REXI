@@ -3,6 +3,9 @@
 #include "rexi/market_data/message_header.hpp"
 #include "rexi/market_data/messages.hpp"
 #include "rexi/market_data/types.hpp"
+#include "rexi/order_book/order_id_index.hpp"
+#include "rexi/order_book/order_pool.hpp"
+#include "rexi/order_book/order_slot.hpp"
 #include "rexi/order_book/price_level.hpp"
 #include "rexi/order_book/resting_order.hpp"
 #include "rexi/order_book/types.hpp"
@@ -13,7 +16,6 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -30,11 +32,10 @@ struct L3Snapshot {
 };
 
 /**
- * @brief Canonical high-performance, deterministic L2/L3 Order Book.
+ * @brief High-performance, deterministic L2/L3 Order Book with zero steady-state heap allocations.
  *
- * Implements strict price-time FIFO ordering within each price level,
- * O(1) order lookup and cancellation by OrderId, real-time L2 level aggregation,
- * and seamless application of Phase 04 market data messages.
+ * Employs a preallocated OrderPool with intrusive FIFO links and an open-addressing OrderId index
+ * to achieve O(1) order operations without per-order dynamic memory allocations.
  */
 class OrderBook {
 public:
@@ -42,34 +43,25 @@ public:
     using AskMap = std::map<Price, PriceLevel, std::less<Price>>;
 
     explicit OrderBook(InstrumentId instrument_id = 0,
-                       CrossedBookPolicy policy = CrossedBookPolicy::Reject) noexcept
-        : instrument_id_(instrument_id), policy_(policy) {}
+                       CrossedBookPolicy policy = CrossedBookPolicy::Reject,
+                       OrderBookConfig config = {}) noexcept
+        : instrument_id_(instrument_id),
+          policy_(policy),
+          config_(config),
+          order_pool_(OrderPoolConfig{
+              .initial_capacity = config.initial_order_capacity,
+              .max_capacity = config.max_order_capacity,
+              .allow_growth = config.allow_pool_growth,
+          }),
+          order_index_(config.initial_order_capacity, config.allow_pool_growth) {}
 
     // -------------------------------------------------------------------------
     // Rule of 5: Deep Copy & Move Semantics
     // -------------------------------------------------------------------------
 
     ~OrderBook() = default;
-
-    OrderBook(const OrderBook& other)
-        : instrument_id_(other.instrument_id_),
-          policy_(other.policy_),
-          bids_(other.bids_),
-          asks_(other.asks_) {
-        rebuild_order_index();
-    }
-
-    OrderBook& operator=(const OrderBook& other) {
-        if (this != &other) {
-            instrument_id_ = other.instrument_id_;
-            policy_ = other.policy_;
-            bids_ = other.bids_;
-            asks_ = other.asks_;
-            rebuild_order_index();
-        }
-        return *this;
-    }
-
+    OrderBook(const OrderBook&) = default;
+    OrderBook& operator=(const OrderBook&) = default;
     OrderBook(OrderBook&&) noexcept = default;
     OrderBook& operator=(OrderBook&&) noexcept = default;
 
@@ -82,6 +74,10 @@ public:
 
     [[nodiscard]] CrossedBookPolicy policy() const noexcept { return policy_; }
     void set_policy(CrossedBookPolicy policy) noexcept { policy_ = policy; }
+
+    [[nodiscard]] const OrderBookConfig& config() const noexcept { return config_; }
+    [[nodiscard]] const OrderPool& order_pool() const noexcept { return order_pool_; }
+    [[nodiscard]] const OrderIdIndex& order_index() const noexcept { return order_index_; }
 
     // -------------------------------------------------------------------------
     // Level 1: Best Bid / Best Ask / Top Quote
@@ -238,42 +234,46 @@ public:
     }
 
     [[nodiscard]] const RestingOrder* find_order(OrderId order_id) const noexcept {
-        auto it = order_index_.find(order_id);
-        if (it == order_index_.end()) {
+        const auto* entry = order_index_.find(order_id);
+        if (entry == nullptr || !order_pool_.is_valid_handle(entry->handle)) {
             return nullptr;
         }
-        return &(*it->second.order_it);
+        return &order_pool_.order(entry->handle);
     }
 
     /**
      * @brief Calculate the 0-indexed FIFO queue position of an order at its price level.
      */
     [[nodiscard]] std::optional<size_t> get_queue_position(OrderId order_id) const noexcept {
-        auto it = order_index_.find(order_id);
-        if (it == order_index_.end()) {
+        const auto* entry = order_index_.find(order_id);
+        if (entry == nullptr) {
             return std::nullopt;
         }
-        const auto& loc = it->second;
-        if (loc.side == Side::Buy) {
-            auto level_it = bids_.find(loc.price);
+
+        if (entry->side == Side::Buy) {
+            auto level_it = bids_.find(entry->price);
             if (level_it != bids_.end()) {
                 size_t pos = 0;
-                for (auto q_it = level_it->second.orders().begin();
-                     q_it != level_it->second.orders().end(); ++q_it, ++pos) {
-                    if (q_it == loc.order_it) {
+                OrderHandle curr = level_it->second.head();
+                while (curr != kInvalidOrderHandle) {
+                    if (curr == entry->handle) {
                         return pos;
                     }
+                    curr = order_pool_.slot(curr).next;
+                    ++pos;
                 }
             }
         } else {
-            auto level_it = asks_.find(loc.price);
+            auto level_it = asks_.find(entry->price);
             if (level_it != asks_.end()) {
                 size_t pos = 0;
-                for (auto q_it = level_it->second.orders().begin();
-                     q_it != level_it->second.orders().end(); ++q_it, ++pos) {
-                    if (q_it == loc.order_it) {
+                OrderHandle curr = level_it->second.head();
+                while (curr != kInvalidOrderHandle) {
+                    if (curr == entry->handle) {
                         return pos;
                     }
+                    curr = order_pool_.slot(curr).next;
+                    ++pos;
                 }
             }
         }
@@ -285,12 +285,14 @@ public:
         if (side == Side::Buy) {
             auto it = bids_.find(price);
             if (it != bids_.end()) {
-                orders.assign(it->second.orders().begin(), it->second.orders().end());
+                it->second.for_each_order(order_pool_,
+                                          [&](const RestingOrder& ord) { orders.push_back(ord); });
             }
         } else {
             auto it = asks_.find(price);
             if (it != asks_.end()) {
-                orders.assign(it->second.orders().begin(), it->second.orders().end());
+                it->second.for_each_order(order_pool_,
+                                          [&](const RestingOrder& ord) { orders.push_back(ord); });
             }
         }
         return orders;
@@ -334,14 +336,25 @@ public:
             }
         }
 
+        // Allocate slot from OrderPool
+        OrderHandle handle = order_pool_.allocate(order);
+        if (handle == kInvalidOrderHandle) {
+            return OrderBookStatus::PoolExhausted;
+        }
+
+        // Insert into OrderIdIndex
+        if (!order_index_.insert(order.order_id, handle, order.side, order.price)) {
+            order_pool_.deallocate(handle);
+            return OrderBookStatus::PoolExhausted;
+        }
+
+        // Append to price level intrusive FIFO queue
         if (order.side == Side::Buy) {
             auto& level = bids_.try_emplace(order.price, order.price).first->second;
-            auto it = level.push_back(order);
-            order_index_[order.order_id] = OrderLocation{Side::Buy, order.price, it};
+            level.push_back(handle, order.remaining_quantity, order_pool_);
         } else {
             auto& level = asks_.try_emplace(order.price, order.price).first->second;
-            auto it = level.push_back(order);
-            order_index_[order.order_id] = OrderLocation{Side::Sell, order.price, it};
+            level.push_back(handle, order.remaining_quantity, order_pool_);
         }
 
         return OrderBookStatus::Success;
@@ -351,39 +364,41 @@ public:
      * @brief Cancel an active resting order by OrderId in O(1) time.
      */
     OrderBookStatus cancel_order(OrderId order_id, RestingOrder* out_cancelled = nullptr) {
-        auto it = order_index_.find(order_id);
-        if (it == order_index_.end()) {
+        const auto* entry = order_index_.find(order_id);
+        if (entry == nullptr) {
             return OrderBookStatus::OrderNotFound;
         }
 
-        OrderLocation loc = it->second;
-        order_index_.erase(it);
+        OrderHandle handle = entry->handle;
+        Side side = entry->side;
+        Price price = entry->price;
 
-        if (loc.side == Side::Buy) {
-            auto level_it = bids_.find(loc.price);
+        if (out_cancelled != nullptr) {
+            *out_cancelled = order_pool_.order(handle);
+        }
+
+        if (side == Side::Buy) {
+            auto level_it = bids_.find(price);
             if (level_it == bids_.end()) {
                 return OrderBookStatus::LevelNotFound;
             }
-            if (out_cancelled != nullptr) {
-                *out_cancelled = *loc.order_it;
-            }
-            level_it->second.erase(loc.order_it);
+            level_it->second.erase(handle, order_pool_);
             if (level_it->second.is_empty()) {
                 bids_.erase(level_it);
             }
         } else {
-            auto level_it = asks_.find(loc.price);
+            auto level_it = asks_.find(price);
             if (level_it == asks_.end()) {
                 return OrderBookStatus::LevelNotFound;
             }
-            if (out_cancelled != nullptr) {
-                *out_cancelled = *loc.order_it;
-            }
-            level_it->second.erase(loc.order_it);
+            level_it->second.erase(handle, order_pool_);
             if (level_it->second.is_empty()) {
                 asks_.erase(level_it);
             }
         }
+
+        order_index_.erase(order_id);
+        order_pool_.deallocate(handle);
 
         return OrderBookStatus::Success;
     }
@@ -397,47 +412,53 @@ public:
             return OrderBookStatus::InvalidQuantity;
         }
 
-        auto it = order_index_.find(order_id);
-        if (it == order_index_.end()) {
+        const auto* entry = order_index_.find(order_id);
+        if (entry == nullptr) {
             return OrderBookStatus::OrderNotFound;
         }
 
-        OrderLocation loc = it->second;
-        if (executed_qty > loc.order_it->remaining_quantity) {
+        OrderHandle handle = entry->handle;
+        Side side = entry->side;
+        Price price = entry->price;
+        auto& slot = order_pool_.slot(handle);
+
+        if (executed_qty > slot.order.remaining_quantity) {
             return OrderBookStatus::QuantityExceedsRemaining;
         }
 
-        if (loc.side == Side::Buy) {
-            auto level_it = bids_.find(loc.price);
+        if (side == Side::Buy) {
+            auto level_it = bids_.find(price);
             if (level_it == bids_.end()) {
                 return OrderBookStatus::LevelNotFound;
             }
-            level_it->second.reduce(loc.order_it, executed_qty);
+            level_it->second.reduce(handle, executed_qty, order_pool_);
             if (out_order != nullptr) {
-                *out_order = *loc.order_it;
+                *out_order = slot.order;
             }
-            if (loc.order_it->remaining_quantity == 0) {
-                level_it->second.erase(loc.order_it);
+            if (slot.order.remaining_quantity == 0) {
+                level_it->second.erase(handle, order_pool_);
                 if (level_it->second.is_empty()) {
                     bids_.erase(level_it);
                 }
-                order_index_.erase(it);
+                order_index_.erase(order_id);
+                order_pool_.deallocate(handle);
             }
         } else {
-            auto level_it = asks_.find(loc.price);
+            auto level_it = asks_.find(price);
             if (level_it == asks_.end()) {
                 return OrderBookStatus::LevelNotFound;
             }
-            level_it->second.reduce(loc.order_it, executed_qty);
+            level_it->second.reduce(handle, executed_qty, order_pool_);
             if (out_order != nullptr) {
-                *out_order = *loc.order_it;
+                *out_order = slot.order;
             }
-            if (loc.order_it->remaining_quantity == 0) {
-                level_it->second.erase(loc.order_it);
+            if (slot.order.remaining_quantity == 0) {
+                level_it->second.erase(handle, order_pool_);
                 if (level_it->second.is_empty()) {
                     asks_.erase(level_it);
                 }
-                order_index_.erase(it);
+                order_index_.erase(order_id);
+                order_pool_.deallocate(handle);
             }
         }
 
@@ -455,55 +476,58 @@ public:
             return OrderBookStatus::InvalidQuantity;
         }
 
-        auto it = order_index_.find(order_id);
-        if (it == order_index_.end()) {
+        const auto* entry = order_index_.find(order_id);
+        if (entry == nullptr) {
             return OrderBookStatus::OrderNotFound;
         }
 
-        OrderLocation& loc = it->second;
-        Quantity current_qty = loc.order_it->remaining_quantity;
+        OrderHandle handle = entry->handle;
+        Side side = entry->side;
+        Price price = entry->price;
+        auto& slot = order_pool_.slot(handle);
+        Quantity current_qty = slot.order.remaining_quantity;
 
         if (new_qty == current_qty) {
             return OrderBookStatus::Success;
         }
 
-        if (loc.side == Side::Buy) {
-            auto level_it = bids_.find(loc.price);
+        if (side == Side::Buy) {
+            auto level_it = bids_.find(price);
             if (level_it == bids_.end()) {
                 return OrderBookStatus::LevelNotFound;
             }
             if (new_qty < current_qty) {
                 // Priority preserved
-                level_it->second.reduce(loc.order_it, current_qty - new_qty);
+                level_it->second.reduce(handle, current_qty - new_qty, order_pool_);
             } else {
                 // Priority lost: move to back
                 Quantity diff = new_qty - current_qty;
-                loc.order_it->remaining_quantity = new_qty;
+                slot.order.remaining_quantity = new_qty;
                 level_it->second.add_quantity(diff);
-                level_it->second.move_to_back(loc.order_it);
+                level_it->second.move_to_back(handle, order_pool_);
             }
         } else {
-            auto level_it = asks_.find(loc.price);
+            auto level_it = asks_.find(price);
             if (level_it == asks_.end()) {
                 return OrderBookStatus::LevelNotFound;
             }
             if (new_qty < current_qty) {
                 // Priority preserved
-                level_it->second.reduce(loc.order_it, current_qty - new_qty);
+                level_it->second.reduce(handle, current_qty - new_qty, order_pool_);
             } else {
                 // Priority lost: move to back
                 Quantity diff = new_qty - current_qty;
-                loc.order_it->remaining_quantity = new_qty;
+                slot.order.remaining_quantity = new_qty;
                 level_it->second.add_quantity(diff);
-                level_it->second.move_to_back(loc.order_it);
+                level_it->second.move_to_back(handle, order_pool_);
             }
         }
 
         if (new_seq != 0) {
-            loc.order_it->priority_seq = new_seq;
+            slot.order.priority_seq = new_seq;
         }
         if (new_ts != 0) {
-            loc.order_it->timestamp_ns = new_ts;
+            slot.order.timestamp_ns = new_ts;
         }
 
         return OrderBookStatus::Success;
@@ -523,64 +547,71 @@ public:
             return OrderBookStatus::InvalidQuantity;
         }
 
-        auto it = order_index_.find(order_id);
-        if (it == order_index_.end()) {
+        const auto* entry = order_index_.find(order_id);
+        if (entry == nullptr) {
             return OrderBookStatus::OrderNotFound;
         }
 
-        OrderLocation loc = it->second;
-        if (new_price == loc.price) {
+        if (new_price == entry->price) {
             return modify_order(order_id, new_qty, new_seq, new_ts);
         }
 
         // Crossed market check for the new price
         if (policy_ == CrossedBookPolicy::Reject) {
-            if (loc.side == Side::Buy && !asks_.empty() && new_price >= asks_.begin()->first) {
+            if (entry->side == Side::Buy && !asks_.empty() && new_price >= asks_.begin()->first) {
                 return OrderBookStatus::CrossedMarketRejected;
             }
-            if (loc.side == Side::Sell && !bids_.empty() && new_price <= bids_.begin()->first) {
+            if (entry->side == Side::Sell && !bids_.empty() && new_price <= bids_.begin()->first) {
                 return OrderBookStatus::CrossedMarketRejected;
             }
         }
 
-        // Copy order state
-        RestingOrder updated = *loc.order_it;
-        updated.price = new_price;
-        updated.remaining_quantity = new_qty;
-        updated.initial_quantity = new_qty;
-        if (new_seq != 0) {
-            updated.priority_seq = new_seq;
-        }
-        if (new_ts != 0) {
-            updated.timestamp_ns = new_ts;
-        }
+        OrderHandle handle = entry->handle;
+        Side side = entry->side;
+        Price old_price = entry->price;
 
         // Remove from old level
-        if (loc.side == Side::Buy) {
-            auto level_it = bids_.find(loc.price);
+        if (side == Side::Buy) {
+            auto level_it = bids_.find(old_price);
             if (level_it != bids_.end()) {
-                level_it->second.erase(loc.order_it);
+                level_it->second.erase(handle, order_pool_);
                 if (level_it->second.is_empty()) {
                     bids_.erase(level_it);
                 }
             }
-            // Insert into new level
-            auto& new_level = bids_.try_emplace(new_price, new_price).first->second;
-            auto new_it = new_level.push_back(updated);
-            it->second = OrderLocation{Side::Buy, new_price, new_it};
         } else {
-            auto level_it = asks_.find(loc.price);
+            auto level_it = asks_.find(old_price);
             if (level_it != asks_.end()) {
-                level_it->second.erase(loc.order_it);
+                level_it->second.erase(handle, order_pool_);
                 if (level_it->second.is_empty()) {
                     asks_.erase(level_it);
                 }
             }
-            // Insert into new level
-            auto& new_level = asks_.try_emplace(new_price, new_price).first->second;
-            auto new_it = new_level.push_back(updated);
-            it->second = OrderLocation{Side::Sell, new_price, new_it};
         }
+
+        // Update slot in OrderPool
+        auto& slot = order_pool_.slot(handle);
+        slot.order.price = new_price;
+        slot.order.remaining_quantity = new_qty;
+        slot.order.initial_quantity = new_qty;
+        if (new_seq != 0) {
+            slot.order.priority_seq = new_seq;
+        }
+        if (new_ts != 0) {
+            slot.order.timestamp_ns = new_ts;
+        }
+
+        // Insert into new price level
+        if (side == Side::Buy) {
+            auto& new_level = bids_.try_emplace(new_price, new_price).first->second;
+            new_level.push_back(handle, new_qty, order_pool_);
+        } else {
+            auto& new_level = asks_.try_emplace(new_price, new_price).first->second;
+            new_level.push_back(handle, new_qty, order_pool_);
+        }
+
+        // Update index entry
+        order_index_.insert(order_id, handle, side, new_price);
 
         return OrderBookStatus::Success;
     }
@@ -589,9 +620,6 @@ public:
     // Phase 04 Market Data Protocol Integration
     // -------------------------------------------------------------------------
 
-    /**
-     * @brief Apply a Phase 04 OrderBookAddMessage.
-     */
     OrderBookStatus apply_add(const rexi::market_data::MarketDataHeader& header,
                               const rexi::market_data::OrderBookAddMessage& msg) {
         if (header.message_type != rexi::market_data::MarketDataMessageType::OrderBookAdd) {
@@ -630,9 +658,6 @@ public:
         return add_order(order);
     }
 
-    /**
-     * @brief Apply a Phase 04 OrderBookModifyMessage.
-     */
     OrderBookStatus apply_modify(const rexi::market_data::MarketDataHeader& header,
                                  const rexi::market_data::OrderBookModifyMessage& msg) {
         if (header.message_type != rexi::market_data::MarketDataMessageType::OrderBookModify) {
@@ -656,9 +681,6 @@ public:
                              header.source_timestamp_ns);
     }
 
-    /**
-     * @brief Apply a Phase 04 OrderBookDeleteMessage.
-     */
     OrderBookStatus apply_delete(const rexi::market_data::MarketDataHeader& header,
                                  const rexi::market_data::OrderBookDeleteMessage& msg) {
         if (header.message_type != rexi::market_data::MarketDataMessageType::OrderBookDelete) {
@@ -675,33 +697,24 @@ public:
         return cancel_order(msg.order_id);
     }
 
-    /**
-     * @brief Apply a canonical Phase 04 OrderBookSnapshotMessage.
-     *
-     * Clears current state and reconstructs L2 aggregated price levels without
-     * fabricating synthetic L3 order identities.
-     */
     OrderBookStatus apply_snapshot(const rexi::market_data::OrderBookSnapshotMessage& snapshot) {
         if (snapshot.bid_levels_count > rexi::market_data::MaxSnapshotLevels ||
             snapshot.ask_levels_count > rexi::market_data::MaxSnapshotLevels) {
             return OrderBookStatus::InvalidSnapshot;
         }
 
-        // Validate descending bids
         for (size_t i = 1; i < snapshot.bid_levels_count; ++i) {
             if (snapshot.bids[i].price >= snapshot.bids[i - 1].price) {
                 return OrderBookStatus::InvalidSnapshot;
             }
         }
 
-        // Validate ascending asks
         for (size_t i = 1; i < snapshot.ask_levels_count; ++i) {
             if (snapshot.asks[i].price <= snapshot.asks[i - 1].price) {
                 return OrderBookStatus::InvalidSnapshot;
             }
         }
 
-        // Crossed market check
         if (policy_ == CrossedBookPolicy::Reject && snapshot.bid_levels_count > 0 &&
             snapshot.ask_levels_count > 0) {
             if (snapshot.bids[0].price >= snapshot.asks[0].price) {
@@ -730,11 +743,6 @@ public:
         return OrderBookStatus::Success;
     }
 
-    /**
-     * @brief Export the current state as a Phase 04 OrderBookSnapshotMessage.
-     *
-     * Truncates to the protocol's 10-level limit per side.
-     */
     [[nodiscard]] rexi::market_data::OrderBookSnapshotMessage to_phase04_snapshot(
         SequenceNumber seq = 0) const noexcept {
         rexi::market_data::OrderBookSnapshotMessage snap{};
@@ -777,9 +785,6 @@ public:
     // Native Level 3 Snapshot Import / Export
     // -------------------------------------------------------------------------
 
-    /**
-     * @brief Apply a native L3 snapshot containing full resting order state.
-     */
     OrderBookStatus apply_l3_snapshot(const L3Snapshot& snapshot) {
         if (instrument_id_ != 0 && snapshot.instrument_id != 0 &&
             snapshot.instrument_id != instrument_id_) {
@@ -796,9 +801,6 @@ public:
         return OrderBookStatus::Success;
     }
 
-    /**
-     * @brief Export complete L3 resting order state.
-     */
     [[nodiscard]] L3Snapshot to_l3_snapshot(SequenceNumber seq = 0,
                                             Timestamp ts = 0) const noexcept {
         L3Snapshot snap{
@@ -810,15 +812,13 @@ public:
         snap.orders.reserve(order_index_.size());
         for (const auto& [price, level] : bids_) {
             (void)price;
-            for (const auto& ord : level.orders()) {
-                snap.orders.push_back(ord);
-            }
+            level.for_each_order(order_pool_,
+                                 [&](const RestingOrder& ord) { snap.orders.push_back(ord); });
         }
         for (const auto& [price, level] : asks_) {
             (void)price;
-            for (const auto& ord : level.orders()) {
-                snap.orders.push_back(ord);
-            }
+            level.for_each_order(order_pool_,
+                                 [&](const RestingOrder& ord) { snap.orders.push_back(ord); });
         }
         return snap;
     }
@@ -831,10 +831,11 @@ public:
         bids_.clear();
         asks_.clear();
         order_index_.clear();
+        order_pool_.clear();
     }
 
     /**
-     * @brief Comprehensive internal invariant validation.
+     * @brief Comprehensive internal invariant validation across L1, L2, and L3 structures.
      */
     [[nodiscard]] ValidationResult validate() const {
         // Invariant 1: Bids strictly descending
@@ -859,33 +860,50 @@ public:
 
             if (!level.is_l2_aggregate_only()) {
                 Quantity sum_qty = 0;
-                for (const auto& ord : level.orders()) {
-                    if (ord.side != Side::Buy) {
+                uint32_t count = 0;
+                OrderHandle curr = level.head();
+                OrderHandle prev = kInvalidOrderHandle;
+                while (curr != kInvalidOrderHandle) {
+                    if (!order_pool_.is_valid_handle(curr)) {
+                        return ValidationResult{false, "Invalid order handle in bid level queue"};
+                    }
+                    const auto& slot = order_pool_.slot(curr);
+                    if (slot.prev != prev) {
+                        return ValidationResult{false, "Broken prev link in bid level queue"};
+                    }
+                    if (slot.order.side != Side::Buy) {
                         return ValidationResult{false, "Non-buy order in bid level"};
                     }
-                    if (ord.price != price) {
+                    if (slot.order.price != price) {
                         return ValidationResult{false, "Order price mismatch in bid level"};
                     }
-                    if (ord.remaining_quantity == 0) {
+                    if (slot.order.remaining_quantity == 0) {
                         return ValidationResult{false, "Order has 0 remaining quantity"};
                     }
-                    if (instrument_id_ != 0 && ord.instrument_id != 0 &&
-                        ord.instrument_id != instrument_id_) {
+                    if (instrument_id_ != 0 && slot.order.instrument_id != 0 &&
+                        slot.order.instrument_id != instrument_id_) {
                         return ValidationResult{false, "Order instrument mismatch"};
                     }
-                    auto idx_it = order_index_.find(ord.order_id);
-                    if (idx_it == order_index_.end()) {
+                    const auto* idx_entry = order_index_.find(slot.order.order_id);
+                    if (idx_entry == nullptr) {
                         return ValidationResult{false, "Resting order missing from index"};
                     }
-                    if (idx_it->second.price != price || idx_it->second.side != Side::Buy) {
+                    if (idx_entry->price != price || idx_entry->side != Side::Buy ||
+                        idx_entry->handle != curr) {
                         return ValidationResult{false, "Index location mismatch for bid order"};
                     }
-                    sum_qty += ord.remaining_quantity;
+                    sum_qty += slot.order.remaining_quantity;
+                    ++count;
+                    prev = curr;
+                    curr = slot.next;
+                }
+                if (level.tail() != prev) {
+                    return ValidationResult{false, "Bid level tail mismatch"};
                 }
                 if (sum_qty != level.total_quantity()) {
                     return ValidationResult{false, "Bid level quantity sum mismatch"};
                 }
-                if (level.orders().size() != level.order_count()) {
+                if (count != level.order_count()) {
                     return ValidationResult{false, "Bid level order count mismatch"};
                 }
             }
@@ -913,33 +931,50 @@ public:
 
             if (!level.is_l2_aggregate_only()) {
                 Quantity sum_qty = 0;
-                for (const auto& ord : level.orders()) {
-                    if (ord.side != Side::Sell) {
+                uint32_t count = 0;
+                OrderHandle curr = level.head();
+                OrderHandle prev = kInvalidOrderHandle;
+                while (curr != kInvalidOrderHandle) {
+                    if (!order_pool_.is_valid_handle(curr)) {
+                        return ValidationResult{false, "Invalid order handle in ask level queue"};
+                    }
+                    const auto& slot = order_pool_.slot(curr);
+                    if (slot.prev != prev) {
+                        return ValidationResult{false, "Broken prev link in ask level queue"};
+                    }
+                    if (slot.order.side != Side::Sell) {
                         return ValidationResult{false, "Non-sell order in ask level"};
                     }
-                    if (ord.price != price) {
+                    if (slot.order.price != price) {
                         return ValidationResult{false, "Order price mismatch in ask level"};
                     }
-                    if (ord.remaining_quantity == 0) {
+                    if (slot.order.remaining_quantity == 0) {
                         return ValidationResult{false, "Order has 0 remaining quantity"};
                     }
-                    if (instrument_id_ != 0 && ord.instrument_id != 0 &&
-                        ord.instrument_id != instrument_id_) {
+                    if (instrument_id_ != 0 && slot.order.instrument_id != 0 &&
+                        slot.order.instrument_id != instrument_id_) {
                         return ValidationResult{false, "Order instrument mismatch"};
                     }
-                    auto idx_it = order_index_.find(ord.order_id);
-                    if (idx_it == order_index_.end()) {
+                    const auto* idx_entry = order_index_.find(slot.order.order_id);
+                    if (idx_entry == nullptr) {
                         return ValidationResult{false, "Resting order missing from index"};
                     }
-                    if (idx_it->second.price != price || idx_it->second.side != Side::Sell) {
+                    if (idx_entry->price != price || idx_entry->side != Side::Sell ||
+                        idx_entry->handle != curr) {
                         return ValidationResult{false, "Index location mismatch for ask order"};
                     }
-                    sum_qty += ord.remaining_quantity;
+                    sum_qty += slot.order.remaining_quantity;
+                    ++count;
+                    prev = curr;
+                    curr = slot.next;
+                }
+                if (level.tail() != prev) {
+                    return ValidationResult{false, "Ask level tail mismatch"};
                 }
                 if (sum_qty != level.total_quantity()) {
                     return ValidationResult{false, "Ask level quantity sum mismatch"};
                 }
-                if (level.orders().size() != level.order_count()) {
+                if (count != level.order_count()) {
                     return ValidationResult{false, "Ask level order count mismatch"};
                 }
             }
@@ -963,7 +998,12 @@ public:
             return ValidationResult{false, "Total L3 orders does not match order_index size"};
         }
 
-        // Invariant 4: Crossed market check in Reject policy
+        // Invariant 4: OrderPool allocated count equals order_index size
+        if (order_pool_.allocated_count() != order_index_.size()) {
+            return ValidationResult{false, "OrderPool allocated count does not match order_index"};
+        }
+
+        // Invariant 5: Crossed market check in Reject policy
         if (policy_ == CrossedBookPolicy::Reject && !bids_.empty() && !asks_.empty()) {
             if (bids_.begin()->first >= asks_.begin()->first) {
                 return ValidationResult{false, "Crossed market in Reject policy"};
@@ -974,31 +1014,13 @@ public:
     }
 
 private:
-    struct OrderLocation {
-        Side side{Side::Buy};
-        Price price{0};
-        PriceLevel::OrderIterator order_it{};
-    };
-
-    void rebuild_order_index() {
-        order_index_.clear();
-        for (auto& [price, level] : bids_) {
-            for (auto it = level.orders().begin(); it != level.orders().end(); ++it) {
-                order_index_[it->order_id] = OrderLocation{Side::Buy, price, it};
-            }
-        }
-        for (auto& [price, level] : asks_) {
-            for (auto it = level.orders().begin(); it != level.orders().end(); ++it) {
-                order_index_[it->order_id] = OrderLocation{Side::Sell, price, it};
-            }
-        }
-    }
-
     InstrumentId instrument_id_{0};
     CrossedBookPolicy policy_{CrossedBookPolicy::Reject};
+    OrderBookConfig config_{};
+    OrderPool order_pool_;
+    OrderIdIndex order_index_;
     BidMap bids_{};
     AskMap asks_{};
-    std::unordered_map<OrderId, OrderLocation> order_index_{};
 };
 
 }  // namespace rexi::order_book

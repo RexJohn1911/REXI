@@ -69,6 +69,7 @@ TEST(OrderBookTypesTest, RestingOrderLayoutAndMethods) {
 
 TEST(OrderBookTypesTest, PriceLevelOperations) {
     PriceLevel level(100);
+    OrderPool pool(OrderPoolConfig{.initial_capacity = 10});
     EXPECT_EQ(level.price(), 100);
     EXPECT_EQ(level.total_quantity(), 0);
     EXPECT_EQ(level.order_count(), 0);
@@ -95,32 +96,36 @@ TEST(OrderBookTypesTest, PriceLevelOperations) {
         .timestamp_ns = 2000,
     };
 
-    auto it1 = level.push_back(order1);
+    auto h1 = pool.allocate(order1);
+    level.push_back(h1, order1.remaining_quantity, pool);
     EXPECT_EQ(level.total_quantity(), 50);
     EXPECT_EQ(level.order_count(), 1);
     EXPECT_FALSE(level.is_empty());
 
-    auto it2 = level.push_back(order2);
+    auto h2 = pool.allocate(order2);
+    level.push_back(h2, order2.remaining_quantity, pool);
     EXPECT_EQ(level.total_quantity(), 125);
     EXPECT_EQ(level.order_count(), 2);
 
     // Reduce order1
-    level.reduce(it1, 20);
-    EXPECT_EQ(it1->remaining_quantity, 30);
+    level.reduce(h1, 20, pool);
+    EXPECT_EQ(pool.order(h1).remaining_quantity, 30);
     EXPECT_EQ(level.total_quantity(), 105);
 
     // Move order1 to back
-    level.move_to_back(it1);
-    EXPECT_EQ(level.orders().front().order_id, 2);
-    EXPECT_EQ(level.orders().back().order_id, 1);
+    level.move_to_back(h1, pool);
+    EXPECT_EQ(pool.order(level.head()).order_id, 2);
+    EXPECT_EQ(pool.order(level.tail()).order_id, 1);
 
     // Erase order2
-    level.erase(it2);
+    level.erase(h2, pool);
+    pool.deallocate(h2);
     EXPECT_EQ(level.order_count(), 1);
     EXPECT_EQ(level.total_quantity(), 30);
 
     // Erase order1
-    level.erase(it1);
+    level.erase(h1, pool);
+    pool.deallocate(h1);
     EXPECT_EQ(level.order_count(), 0);
     EXPECT_EQ(level.total_quantity(), 0);
     EXPECT_TRUE(level.is_empty());

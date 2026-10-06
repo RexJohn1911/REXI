@@ -150,3 +150,20 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0028: Configurable Locked/Crossed Market Policy
 - **Decision:** Support explicit `CrossedBookPolicy`: `Reject` (default for matching engine books, rejecting updates crossing the spread) vs `Allow` (for reconstructing external market data feeds where crossed markets temporarily occur).
 - **Rationale:** Keeps matching engine invariant enforcement strict while allowing flexible adaptation to noisy real-world feed streams.
+
+### DEC-0029: Preallocated Contiguous OrderPool with Intrusive Free-List
+- **Decision:** Replace per-order heap allocations in `PriceLevel` with a contiguous, preallocated `OrderPool` of 80-byte `OrderSlot` objects, managed by an intrusive free-list embedded directly in the slot structures.
+- **Rationale:** Eliminates dynamic memory allocation and deallocation during steady-state order insertions and cancellations, resolving CON-0007.
+- **Reference:** [ADR-0006](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0006-high-performance-data-structures.md)
+
+### DEC-0030: Compact 32-Bit Integer Handles (`OrderHandle`) Over Pointers
+- **Decision:** Use 32-bit unsigned integers (`uint32_t`) as slot handles rather than 64-bit raw pointers or container iterators, with sentinel `kInvalidOrderHandle = 0xFFFFFFFF`.
+- **Rationale:** Reduces handle footprint by 50%, enhances memory density, and ensures handles remain valid across whole-book copy operations without requiring iterator re-pointing.
+
+### DEC-0031: Intrusive FIFO Doubly-Linked Queues Inside PriceLevel
+- **Decision:** Each `PriceLevel` maintains 32-bit `head_` and `tail_` handles, using intrusive `prev` and `next` links embedded directly within the pool slots to maintain strict price-time queue priority.
+- **Rationale:** Reduces `PriceLevel` footprint to 32 bytes and delivers $O(1)$ append, arbitrary erasure, and tail relocation without dynamic node allocation.
+
+### DEC-0032: Open-Addressing OrderIdIndex with Backward-Shift Deletion
+- **Decision:** Replace `std::unordered_map` with an open-addressing linear-probing hash table utilizing SplitMix64 hashing and backward-shift deletion upon erasure.
+- **Rationale:** Eliminates hash bucket node allocations on insertion and completely prevents performance degradation from tombstone accumulation over millions of cancellations.

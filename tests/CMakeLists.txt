@@ -22,6 +22,10 @@ add_executable(rexi_unit_tests
     unit/test_order_book_l3.cpp
     unit/test_order_book_market_data.cpp
     unit/test_order_book_determinism.cpp
+    unit/test_order_pool.cpp
+    unit/test_order_id_index.cpp
+    unit/test_order_book_capacity.cpp
+    unit/test_order_book_allocation.cpp
     integration/test_event_concurrency.cpp
     integration/test_exchange_scenario.cpp
     integration/test_market_data_integration.cpp
