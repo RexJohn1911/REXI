@@ -1,70 +1,11 @@
 #include "rexi/order_book/order_book.hpp"
 
-#include <atomic>
-#include <cstdlib>
-#include <new>
+#include "allocation_guard.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace rexi::order_book;
-
-namespace {
-
-std::atomic<size_t> g_alloc_count{0};
-std::atomic<bool> g_track_allocations{false};
-
-class ScopedAllocationGuard {
-public:
-    ScopedAllocationGuard() {
-        g_alloc_count.store(0, std::memory_order_seq_cst);
-        g_track_allocations.store(true, std::memory_order_seq_cst);
-    }
-    ~ScopedAllocationGuard() { g_track_allocations.store(false, std::memory_order_seq_cst); }
-
-    [[nodiscard]] size_t allocations() const noexcept {
-        return g_alloc_count.load(std::memory_order_seq_cst);
-    }
-};
-
-}  // namespace
-
-void* operator new(std::size_t size) {
-    if (g_track_allocations.load(std::memory_order_relaxed)) {
-        g_alloc_count.fetch_add(1, std::memory_order_relaxed);
-    }
-    void* p = std::malloc(size);
-    if (p == nullptr) {
-        throw std::bad_alloc();
-    }
-    return p;
-}
-
-void operator delete(void* p) noexcept {
-    std::free(p);
-}
-
-void operator delete(void* p, std::size_t) noexcept {
-    std::free(p);
-}
-
-void* operator new[](std::size_t size) {
-    if (g_track_allocations.load(std::memory_order_relaxed)) {
-        g_alloc_count.fetch_add(1, std::memory_order_relaxed);
-    }
-    void* p = std::malloc(size);
-    if (p == nullptr) {
-        throw std::bad_alloc();
-    }
-    return p;
-}
-
-void operator delete[](void* p) noexcept {
-    std::free(p);
-}
-
-void operator delete[](void* p, std::size_t) noexcept {
-    std::free(p);
-}
+using rexi::test::ScopedAllocationGuard;
 
 TEST(OrderBookAllocationTest, ZeroHeapAllocationsDuringSteadyStateOperations) {
     OrderBookConfig config{

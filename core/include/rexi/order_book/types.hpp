@@ -177,6 +177,11 @@ struct TopQuote {
         }
         return false;
     }
+
+    [[nodiscard]] constexpr bool operator==(const TopQuote& other) const noexcept {
+        return bid_price == other.bid_price && bid_quantity == other.bid_quantity &&
+               ask_price == other.ask_price && ask_quantity == other.ask_quantity;
+    }
 };
 
 /**

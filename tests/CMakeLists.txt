@@ -25,11 +25,21 @@ add_executable(rexi_unit_tests
     unit/test_order_pool.cpp
     unit/test_order_id_index.cpp
     unit/test_order_book_capacity.cpp
+    unit/allocation_guard.cpp
     unit/test_order_book_allocation.cpp
+    unit/test_replay_clock.cpp
+    unit/test_replay_ordering.cpp
+    unit/test_replay_reader.cpp
+    unit/test_replay_validation.cpp
+    unit/test_replay_snapshot.cpp
+    unit/test_replay_engine.cpp
+    unit/test_replay_determinism.cpp
+    unit/test_replay_allocation.cpp
     integration/test_event_concurrency.cpp
     integration/test_exchange_scenario.cpp
     integration/test_market_data_integration.cpp
     integration/test_order_book_pipeline.cpp
+    integration/test_replay_pipeline.cpp
 )
 
 target_link_libraries(rexi_unit_tests PRIVATE

@@ -167,3 +167,24 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0032: Open-Addressing OrderIdIndex with Backward-Shift Deletion
 - **Decision:** Replace `std::unordered_map` with an open-addressing linear-probing hash table utilizing SplitMix64 hashing and backward-shift deletion upon erasure.
 - **Rationale:** Eliminates hash bucket node allocations on insertion and completely prevents performance degradation from tombstone accumulation over millions of cancellations.
+
+### DEC-0033: Canonical Replay Record Composition Over Protocol Duplication
+- **Decision:** Encapsulate historical events in `ReplayEvent` using canonical Phase 04 `MarketDataHeader` and typed `std::variant` payloads rather than creating a separate replay-specific protocol hierarchy.
+- **Rationale:** Eliminates protocol divergence, ensures wire/replay parity, and maintains a single canonical event path into the order book.
+- **Reference:** [ADR-0007](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0007-historical-market-replay.md)
+
+### DEC-0034: Strict Total Ordering Contract with Feed-Sequence Primacy
+- **Decision:** Implement `ReplayEventComparator` enforcing total ordering: authoritative feed sequence number first, followed by source timestamp, receive timestamp, feed identifiers, and stable input index.
+- **Rationale:** Prevents arbitrary reordering across simultaneous events while preserving original exchange sequence continuity and eliminating platform-dependent sorting ties.
+
+### DEC-0035: Pure Deterministic ReplayClock with Zero Wall-Clock Coupling
+- **Decision:** Drive historical simulation time entirely through incoming historical timestamps via `ReplayClock`, strictly decoupled from system and steady wall-clock timers.
+- **Rationale:** Guarantees 100% reproducible execution and timing metrics regardless of host CPU speed, execution pauses, or debug stepping.
+
+### DEC-0036: Inline Multi-Feed Sequence Cache with Zero Steady-State Allocations
+- **Decision:** Track sequence managers per feed within `ReplayEngine` via an inline fixed array of 16 entries before falling back to heap structures.
+- **Rationale:** Preserves the Phase 06 zero-allocation guarantee for multi-feed streams during hot-path replay.
+
+### DEC-0037: Canonical 64-Bit State Digest for Determinism Verification
+- **Decision:** Implement `compute_state_digest()` combining 64-bit FNV-1a hashing over sorted price levels, resting order FIFO queues, clock states, and counters without hashing pointers or container layouts.
+- **Rationale:** Enables automated bit-for-bit regression testing across compiler toolchains, optimization levels, and runs.
