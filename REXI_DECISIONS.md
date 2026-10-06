@@ -20,6 +20,10 @@ This document tracks all high-level technical decisions, standards, and conventi
 | **DEC-0010** | 2026-10-06 | Code Style | C++ namespace `rexi` with Google/C++20 clang-format standards | Accepted |
 | **DEC-0011** | 2026-10-06 | Python Setup | Centralized pyproject.toml for pytest, ruff, and mypy | Accepted |
 | **DEC-0012** | 2026-10-06 | Dependencies | FetchContent shallow clones for GoogleTest v1.14.0 and Benchmark v1.8.3 | Accepted |
+| **DEC-0013** | 2026-10-06 | Events | 24-byte `EventHeader` layout with monotonic nanosecond timestamping | Accepted |
+| **DEC-0014** | 2026-10-06 | Events | Compile-time `EventTraits` enforcing trivial copyability for zero allocations | Accepted |
+| **DEC-0015** | 2026-10-06 | Concurrency | Wait-free bounded `SpscRingBuffer` with 64-byte cache line padding | Accepted |
+| **DEC-0016** | 2026-10-06 | Routing | Direct-indexed non-allocating `EventDispatcher` and channel `EventBus` | Accepted |
 
 ---
 
@@ -74,3 +78,20 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0012: Reproducible C++ Test/Benchmark Dependencies
 - **Decision:** Fetch GoogleTest (v1.14.0) and Google Benchmark (v1.8.3) via CMake `FetchContent` using shallow git tags.
 - **Rationale:** Ensures hermetic, zero-dependency builds without requiring global system package installations or committing third-party code.
+
+### DEC-0013: Standardized 24-Byte Event Header
+- **Decision:** All internal messages encapsulate an 8-byte aligned `EventHeader` containing `EventType`, `SourceId`, flags, monotonic sequence number, and nanosecond monotonic timestamp.
+- **Rationale:** Provides consistent message provenance, chronological ordering, and cache alignment without dynamic allocation.
+- **Reference:** [ADR-0002](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0002-core-event-architecture.md)
+
+### DEC-0014: Compile-Time Event Traits & Trivial Copyability
+- **Decision:** Event payloads must implement `EventTraits<T>` and satisfy `std::is_trivially_copyable_v<T>` and `std::is_standard_layout_v<T>`.
+- **Rationale:** Eliminates virtual dispatch and heap allocation overhead in high-frequency event handling.
+
+### DEC-0015: Wait-Free Bounded SPSC Ring Buffer
+- **Decision:** Use an SPSC ring buffer with power-of-2 capacity, 64-byte cache line padding between producer and consumer state, and Acquire/Release atomic index synchronization.
+- **Rationale:** Prevents CPU cacheline bouncing, provides deterministic bounded buffering, and eliminates thread contention.
+
+### DEC-0016: Direct Lookup Event Dispatcher
+- **Decision:** `EventDispatcher` uses direct table indexing over `EventType` without runtime string lookups or dynamic reflection.
+- **Rationale:** Sub-nanosecond dispatch latency per subscriber and zero dynamic heap allocation on the hot path.

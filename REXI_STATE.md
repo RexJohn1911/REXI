@@ -1,46 +1,44 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 01 — Repository & Engineering Foundation
+**Current Phase:** PHASE 02 — Core Event Architecture
 **Phase Status:** COMPLETED
-**Next Phase:** PHASE 02 — Core Event Architecture
+**Next Phase:** PHASE 03 — Exchange Simulator
 **Last Updated:** 2026-10-06
 
 ---
 
 ## Current System State Summary
 
-- **Engineering Foundation:** Modern C++20 target-based CMake build pipeline with Ninja generator, `CMakePresets.json` (Debug and Release), GoogleTest v1.14.0 integration, and Google Benchmark v1.8.3 integration.
-- **C++ Targets:** `rexi_core` library (under namespace `rexi`), `rexi_unit_tests`, and `rexi_benchmarks`.
-- **Python Research Foundation:** Centralized `pyproject.toml` configuration with `pytest`, `ruff`, and `mypy` strict type checking. Packages `research` and `ml` initialized.
-- **Code Quality:** `.clang-format` (Google/C++20 baseline) and `.clang-tidy` configured and validated with 0 errors.
-- **Continuous Integration:** Multi-platform GitHub Actions matrix CI (`.github/workflows/ci.yml`) covering macOS/Linux C++ builds and Python verification.
-- **Documentation:** [TOOLCHAIN.md](file:///Users/rexjohnabraham/Documents/REXI/docs/engineering/TOOLCHAIN.md) developer workflow manual established.
+- **Core Event Architecture:** Strongly typed, zero-allocation C++20 event messaging backbone with 24-byte cache-aligned `EventHeader`, monotonic nanosecond clock provider (`MonotonicClock`), and trivial copyability enforcement via `EventTraits`.
+- **Concurrency & Queuing:** Wait-free bounded `SpscRingBuffer<T, Capacity>` with 64-byte cache line separation, power-of-2 index masking, and Acquire/Release atomic synchronization. ThreadSanitizer verified with 0 data races.
+- **Routing & Dispatch:** Direct-indexed `EventDispatcher` (< 1.0 ns single-subscriber dispatch) and channel-based `EventBus` combining synchronous and asynchronous transport.
+- **Engineering Foundation:** Modern C++20 CMake presets (Debug, Release), GoogleTest (17/17 tests passing), Google Benchmark, and Python research tooling (`pytest`, `ruff`, `mypy`).
 
 ---
 
 ## Active Phase Progress
 
-- [x] Establish CMake presets for Debug and Release builds ([CMakePresets.json](file:///Users/rexjohnabraham/Documents/REXI/CMakePresets.json))
-- [x] Configure modern target-based [CMakeLists.txt](file:///Users/rexjohnabraham/Documents/REXI/CMakeLists.txt) with FetchContent
-- [x] Implement minimal `rexi_core` target with version and build metadata
-- [x] Implement GoogleTest unit tests ([test_version.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_version.cpp))
-- [x] Implement Google Benchmark foundation ([benchmark_foundation.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_foundation.cpp))
-- [x] Centralize Python configuration in [pyproject.toml](file:///Users/rexjohnabraham/Documents/REXI/pyproject.toml)
-- [x] Implement Python research package and pytest tests ([test_research_foundation.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_research_foundation.py))
-- [x] Configure and validate [.clang-format](file:///Users/rexjohnabraham/Documents/REXI/.clang-format) and [.clang-tidy](file:///Users/rexjohnabraham/Documents/REXI/.clang-tidy)
-- [x] Create GitHub Actions CI workflow ([ci.yml](file:///Users/rexjohnabraham/Documents/REXI/.github/workflows/ci.yml))
-- [x] Author developer toolchain manual ([TOOLCHAIN.md](file:///Users/rexjohnabraham/Documents/REXI/docs/engineering/TOOLCHAIN.md))
-- [x] Generate Phase 01 Checkpoint Archive ([PHASE_01_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_01_CHECKPOINT.md))
+- [x] Design and implement nanosecond monotonic clock provider ([clock.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/clock.hpp))
+- [x] Create strongly typed event identifiers and source attributes ([event_types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_types.hpp), [source_id.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/source_id.hpp))
+- [x] Implement standardized 24-byte `EventHeader` ([event_header.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_header.hpp))
+- [x] Implement `Event<Payload>` envelope with compile-time `EventTraits` ([event.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event.hpp))
+- [x] Implement standard foundation testing payloads ([foundation_events.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/foundation_events.hpp))
+- [x] Implement wait-free bounded `SpscRingBuffer` ([spsc_ring_buffer.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/spsc_ring_buffer.hpp))
+- [x] Implement zero-allocation `EventDispatcher` and `EventBus` ([event_dispatcher.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_dispatcher.hpp), [event_bus.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_bus.hpp))
+- [x] Implement unit and concurrency integration tests ([test_events.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_events.cpp), [test_spsc_ring_buffer.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_spsc_ring_buffer.cpp), [test_event_concurrency.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_event_concurrency.cpp))
+- [x] Implement microbenchmarks ([benchmark_events.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_events.cpp))
+- [x] Author Event Architecture Manual ([REXI_EVENT_ARCHITECTURE.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_EVENT_ARCHITECTURE.md)) and ADR ([ADR-0002](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0002-core-event-architecture.md))
+- [x] Generate Phase 02 Checkpoint Archive ([PHASE_02_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_02_CHECKPOINT.md))
 
 ---
 
-## Next Action Plan (Phase 02)
+## Next Action Plan (Phase 03)
 
-- **Target Phase:** PHASE 02 — Core Event Architecture
+- **Target Phase:** PHASE 03 — Exchange Simulator
 - **Objectives:**
-  1. Design nanosecond high-resolution monotonic clock abstractions with zero-allocation timekeeping.
-  2. Implement bounded lock-free single-producer single-consumer (SPSC) ring buffers.
-  3. Define core market/trading event envelope types, event identifiers, and payload variants.
-  4. Implement deterministic event dispatcher and event loop processing primitives.
-  5. Validate latency profiles and throughput with Google Benchmark and GoogleTest.
+  1. Design deterministic order book matching engine in `simulator/exchange/` (price-time priority FIFO).
+  2. Implement limit order placement, cancelation, modification, and execution fill event generation.
+  3. Implement deterministic maker/taker mechanics and fee/rebate accounting hooks.
+  4. Connect exchange simulator outputs to Phase 02 event streams.
+  5. Validate matching correctness with deterministic test suites and microbenchmarks.

@@ -14,8 +14,8 @@
 - [x] **PHASE 01 — Repository & Engineering Foundation**
   - Toolchain bootstrap (CMake, Ninja, Clang/GCC, Python environment), linting/formatting hooks (clang-format, clang-tidy, ruff), testing harnesses (GoogleTest, pytest, Google Benchmark), and multi-platform CI workflows.
 
-- [ ] **PHASE 02 — Core Event Architecture**
-  - Nanosecond clock abstractions, high-performance ring buffers, event dispatcher, lock-free queues, message envelope definitions.
+- [x] **PHASE 02 — Core Event Architecture**
+  - Nanosecond clock abstractions, high-performance SPSC ring buffers, event dispatcher, EventHeader/Event envelopes, message envelope definitions, and concurrency stress testing.
 
 - [ ] **PHASE 03 — Exchange Simulator**
   - Deterministic matching engine, price-time priority, maker/taker mechanics, cancelation processing, deterministic time stepping.
