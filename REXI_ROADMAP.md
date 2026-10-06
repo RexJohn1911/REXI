@@ -1,7 +1,7 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
 **System:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 03 (Exchange Simulator)
+**Current Phase:** PHASE 04 (Market Data Protocol) — COMPLETED
 **Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
@@ -20,8 +20,8 @@
 - [x] **PHASE 03 — Exchange Simulator**
   - Deterministic matching engine, price-time priority, maker/taker mechanics, cancelation processing, deterministic time stepping.
 
-- [ ] **PHASE 04 — Market Data Protocol**
-  - Normalization layers for Top of Book (BBO), Level 2 (Depth), Level 3 (Market by Order / MBO), trade tick feeds, binary packet parsers.
+- [x] **PHASE 04 — Market Data Protocol**
+  - Strongly typed market data primitives, 40-byte canonical header, trivially copyable payloads (TopOfBook, Trade, L2/L3 messages, Snapshot, Status), FNV-1a checksum verification, deterministic sequence tracking & gap handling, structural validation, normalization contract, Phase 02 event traits integration, simulator bridge.
 
 - [ ] **PHASE 05 — L2/L3 Order Book**
   - High-performance price ladder, direct indexed level pools, order queue position tracking, snapshot/delta synchronizer.

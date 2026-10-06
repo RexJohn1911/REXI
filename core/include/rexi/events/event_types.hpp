@@ -26,6 +26,16 @@ enum class EventType : uint16_t {
     TradeExecuted = 14,
     TopQuoteUpdated = 15,
 
+    // Market Data Protocol Events (Phase 04)
+    MarketDataTopOfBook = 20,
+    MarketDataTrade = 21,
+    MarketDataStatus = 22,
+    MarketDataSnapshot = 23,
+    MarketDataAdd = 24,
+    MarketDataModify = 25,
+    MarketDataDelete = 26,
+    MarketDataInstrument = 27,
+
     CustomBase = 100
 };
 
@@ -56,6 +66,22 @@ enum class EventType : uint16_t {
             return "TradeExecuted";
         case EventType::TopQuoteUpdated:
             return "TopQuoteUpdated";
+        case EventType::MarketDataTopOfBook:
+            return "MarketDataTopOfBook";
+        case EventType::MarketDataTrade:
+            return "MarketDataTrade";
+        case EventType::MarketDataStatus:
+            return "MarketDataStatus";
+        case EventType::MarketDataSnapshot:
+            return "MarketDataSnapshot";
+        case EventType::MarketDataAdd:
+            return "MarketDataAdd";
+        case EventType::MarketDataModify:
+            return "MarketDataModify";
+        case EventType::MarketDataDelete:
+            return "MarketDataDelete";
+        case EventType::MarketDataInstrument:
+            return "MarketDataInstrument";
         case EventType::CustomBase:
             return "CustomBase";
     }

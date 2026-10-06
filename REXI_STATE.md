@@ -1,47 +1,51 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 03 — Exchange Simulator
+**Current Phase:** PHASE 04 — Market Data Protocol
 **Phase Status:** COMPLETED
-**Next Phase:** PHASE 04 — Market Data Protocol
+**Next Phase:** PHASE 05 — L2/L3 Order Book
 **Last Updated:** 2026-10-06
 
 ---
 
 ## Current System State Summary
 
-- **Exchange Simulator:** Deterministic in-memory price-time priority matching engine (`Exchange`, `MatchingEngine`, `OrderBook`) supporting Limit and Market orders, resting-order execution pricing, partial fills, multi-level sweeps, and deterministic liquidity exhaustion cancellation.
-- **Fixed-Point Arithmetic:** `Price = int64_t` ticks and `Quantity = uint64_t` lots, eliminating floating-point rounding drift.
-- **Deterministic Time & Priority:** Explicit controllable `SimulationClock` and strictly monotonic exchange `SequenceNum`.
-- **Event Architecture Integration:** Strongly typed exchange events (`OrderAccepted`, `OrderRejected`, `OrderCancelled`, `OrderFilled`, `TradeExecuted`, `TopQuoteUpdated`) dispatched through Phase 02 `EventDispatcher`.
-- **Engineering Quality:** 35/35 GoogleTests passing in Debug, Release, and TSAN configurations, with 100% identical determinism validation across runs.
+- **Market Data Protocol:** Canonical, strongly typed binary market data protocol layer.
+  - 40-byte standard aligned `MarketDataHeader` with versioning, sequence, and timestamps.
+  - Fixed-size, trivially copyable payloads (`TopOfBook`, `Trade`, `OrderBookAdd`, `OrderBookModify`, `OrderBookDelete`, `OrderBookSnapshot`, `MarketStatus`, `InstrumentDefinition`).
+  - Deterministic 32-bit FNV-1a checksum verification (`IntegrityChecksum`).
+  - Monotonic sequence tracking, gap detection, and duplicate handling (`SequenceManager`).
+  - Structural validation (`MessageValidator`) with zero exceptions on malformed feeds.
+  - Adapter normalization contract (`INormalizer<Raw>`).
+  - Phase 02 event traits integration for zero-allocation dispatch.
+  - Exchange simulator bridge (`SimulatorMarketDataBridge`) mapping simulator executions and quotes to canonical messages.
+- **Engineering Quality:** 53/53 GoogleTests passing across all test suites in Debug and Release builds, with sub-nanosecond construction and validation benchmarks.
 
 ---
 
-## Active Phase Progress (Phase 03)
+## Active Phase Progress (Phase 04)
 
-- [x] Design fixed-point price/quantity types and strongly typed IDs ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/types.hpp))
-- [x] Implement tradable instrument specification and validation rules ([instrument.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/instrument.hpp))
-- [x] Implement order entity model and lifecycle transitions ([order.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/order.hpp))
-- [x] Implement immutable trade execution record model ([execution.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/execution.hpp))
-- [x] Implement deterministic controllable simulation clock ([clock.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/clock.hpp))
-- [x] Implement typed exchange simulator events and traits ([events.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/events.hpp))
-- [x] Implement price-time priority limit order book ([order_book.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/order_book.hpp))
-- [x] Implement deterministic matching engine with resting pricing ([matching_engine.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/matching_engine.hpp))
-- [x] Implement exchange session controller ([session.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/session.hpp))
-- [x] Implement top-level exchange facade ([exchange.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/exchange.hpp))
-- [x] Implement unit, integration, and mandatory determinism tests ([tests/unit/](file:///Users/rexjohnabraham/Documents/REXI/tests/unit), [tests/integration/](file:///Users/rexjohnabraham/Documents/REXI/tests/integration))
-- [x] Implement exchange performance microbenchmarks ([benchmark_simulator.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_simulator.cpp))
-- [x] Author Simulator Architecture Manual ([REXI_EXCHANGE_SIMULATOR.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_EXCHANGE_SIMULATOR.md)) and ADR ([ADR-0003](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0003-exchange-simulator.md))
-- [x] Generate Phase 03 Checkpoint Archive ([PHASE_03_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_03_CHECKPOINT.md))
+- [x] Design market data primitives and strongly typed IDs ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/types.hpp))
+- [x] Implement canonical 40-byte header ([message_header.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/message_header.hpp))
+- [x] Implement trivially copyable message payloads ([messages.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/messages.hpp))
+- [x] Implement deterministic 32-bit FNV-1a checksum verification ([checksum.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/checksum.hpp))
+- [x] Implement sequence manager with gap detection and reset semantics ([sequence_manager.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/sequence_manager.hpp))
+- [x] Implement structural message validator ([validator.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/validator.hpp))
+- [x] Implement adapter normalization contract and container ([normalizer.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/normalizer.hpp))
+- [x] Integrate market data events with Phase 02 event system ([events.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/events.hpp))
+- [x] Implement simulator-to-protocol bridge ([simulator_bridge.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/simulator_bridge.hpp))
+- [x] Implement comprehensive unit, integration, and determinism tests ([tests/unit/](file:///Users/rexjohnabraham/Documents/REXI/tests/unit), [tests/integration/](file:///Users/rexjohnabraham/Documents/REXI/tests/integration))
+- [x] Implement market data performance microbenchmarks ([benchmark_market_data.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_market_data.cpp))
+- [x] Author Market Data Protocol Architecture Manual ([REXI_MARKET_DATA_PROTOCOL.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_MARKET_DATA_PROTOCOL.md)) and ADR ([ADR-0004](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0004-market-data-protocol.md))
+- [x] Generate Phase 04 Checkpoint Archive ([PHASE_04_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_04_CHECKPOINT.md))
 
 ---
 
-## Next Action Plan (Phase 04)
+## Next Action Plan (Phase 05)
 
-- **Target Phase:** PHASE 04 — Market Data Protocol
+- **Target Phase:** PHASE 05 — L2/L3 Order Book
 - **Objectives:**
-  1. Define binary wire message format for market data feeds (ticks, top of book, trades).
-  2. Implement zero-allocation binary encoders and decoders.
-  3. Build market data feed simulation streaming from Phase 03 Exchange events.
-  4. Validate serialization round-trip correctness, determinism, and sub-microsecond throughput.
+  1. Build high-performance Level 2 (price-aggregated) order book data structure.
+  2. Build high-performance Level 3 (order-by-order) order book data structure.
+  3. Implement order book snapshot recovery and incremental update processing driven by Phase 04 Market Data Protocol messages.
+  4. Ensure sub-microsecond book update latencies and zero dynamic heap allocation in steady-state operations.

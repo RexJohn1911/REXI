@@ -19,6 +19,7 @@ This document tracks known issues, risks, technical debt, and architectural cons
 | **CON-0003** | AI Safety | High | Risk of AI research agents generating overfitted strategies or leaking out-of-sample data. | Enforce strict no-leakage verification frameworks, deflated Sharpe calculations, and automated temporal causal checks in Phase 09. |
 | **CON-0004** | Latency | High | Cross-language IPC (Python to C++) introduces latency overhead if not properly structured. | Maintain complete separation: production execution runs entirely inside native C++ without runtime Python dependencies. |
 | **CON-0005** | Simulator | Low | Exotic order types (iceberg, pegged, stop-loss) and stochastic network jitter models are excluded from Phase 03 baseline. | Keep simulator core minimal, deterministic, and modular so specialized order types can be added cleanly in later execution phases (Phase 22). |
+| **CON-0006** | Market Data | Low | Canonical flat `OrderBookSnapshotMessage` is bounded to 16 bid/ask levels for zero heap allocation. | Deeper L2 full-depth snapshots or full-book recovery in Phase 05/07 will use multi-packet chunking or out-of-band snapshot channels. |
 
 ---
 

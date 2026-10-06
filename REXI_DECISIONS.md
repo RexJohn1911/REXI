@@ -116,3 +116,20 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0020: Deterministic Single-Threaded Matching Core
 - **Decision:** The core matching engine executes deterministically in a single thread, advancing time strictly through an explicit `SimulationClock` and monotonic sequence numbering (`SequenceNum`).
 - **Rationale:** Eliminates race conditions, thread scheduling jitter, and non-reproducible test failures, ensuring that identical input sequences produce identical output streams.
+
+### DEC-0021: 40-Byte Standard Aligned Market Data Header
+- **Decision:** Standardize canonical market data message headers at 40 bytes (8-byte aligned) containing protocol version, message type discriminant, flags, venue/feed/instrument IDs, 32-bit checksum, sequence number, source timestamp, and receive timestamp.
+- **Rationale:** Minimizes cache-line footprints, eliminates padding overhead, and guarantees standard binary layout across platforms.
+- **Reference:** [ADR-0004](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0004-market-data-protocol.md)
+
+### DEC-0022: Flat Trivially Copyable Message Payloads with Zero Heap Allocation
+- **Decision:** All market data message payloads (TopOfBook, Trade, OrderBookAdd/Modify/Delete, OrderBookSnapshot, MarketStatus) are flat, standard-layout structs without heap allocations, pointers, or dynamic arrays.
+- **Rationale:** Guarantees zero-allocation compatibility with lock-free SPSC ring buffers and sub-nanosecond copy semantics.
+
+### DEC-0023: Deterministic 32-bit FNV-1a Checksum Integrity Protocol
+- **Decision:** Provide optional packet integrity verification using 32-bit FNV-1a hash algorithm (`OffsetBasis = 0x811C9DC5`, `Prime = 0x01000193`).
+- **Rationale:** Fast, zero-allocation non-cryptographic checksum verification (<16 ns) with known test vectors for validating packet integrity across network boundaries.
+
+### DEC-0024: Monotonic Sequence Manager with Explicit Gap & Reset Semantics
+- **Decision:** Track message streams per feed using `SequenceManager` with explicit typed outcomes (`Expected`, `Duplicate`, `Gap`, `OutOfOrder`, `ResetRequired`), refusing silent repair of sequence gaps.
+- **Rationale:** Guarantees that feed discontinuities and session resets are transparently observable to downstream order book and replay consumers.

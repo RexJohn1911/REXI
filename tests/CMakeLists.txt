@@ -10,8 +10,16 @@ add_executable(rexi_unit_tests
     unit/test_matching_engine.cpp
     unit/test_exchange.cpp
     unit/test_determinism.cpp
+    unit/test_market_data_types.cpp
+    unit/test_market_data_validation.cpp
+    unit/test_market_data_sequence.cpp
+    unit/test_market_data_checksum.cpp
+    unit/test_market_data_normalizer.cpp
+    unit/test_market_data_events.cpp
+    unit/test_market_data_determinism.cpp
     integration/test_event_concurrency.cpp
     integration/test_exchange_scenario.cpp
+    integration/test_market_data_integration.cpp
 )
 
 target_link_libraries(rexi_unit_tests PRIVATE
