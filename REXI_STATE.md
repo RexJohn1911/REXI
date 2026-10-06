@@ -1,51 +1,49 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 04 — Market Data Protocol
+**Current Phase:** PHASE 05 — L2/L3 Order Book
 **Phase Status:** COMPLETED
-**Next Phase:** PHASE 05 — L2/L3 Order Book
+**Next Phase:** PHASE 06 — High Performance Data Structures
 **Last Updated:** 2026-10-06
 
 ---
 
 ## Current System State Summary
 
-- **Market Data Protocol:** Canonical, strongly typed binary market data protocol layer.
-  - 40-byte standard aligned `MarketDataHeader` with versioning, sequence, and timestamps.
-  - Fixed-size, trivially copyable payloads (`TopOfBook`, `Trade`, `OrderBookAdd`, `OrderBookModify`, `OrderBookDelete`, `OrderBookSnapshot`, `MarketStatus`, `InstrumentDefinition`).
-  - Deterministic 32-bit FNV-1a checksum verification (`IntegrityChecksum`).
-  - Monotonic sequence tracking, gap detection, and duplicate handling (`SequenceManager`).
-  - Structural validation (`MessageValidator`) with zero exceptions on malformed feeds.
-  - Adapter normalization contract (`INormalizer<Raw>`).
-  - Phase 02 event traits integration for zero-allocation dispatch.
-  - Exchange simulator bridge (`SimulatorMarketDataBridge`) mapping simulator executions and quotes to canonical messages.
-- **Engineering Quality:** 53/53 GoogleTests passing across all test suites in Debug and Release builds, with sub-nanosecond construction and validation benchmarks.
+- **Order Book Subsystem:** Canonical, deterministic, strongly typed L1/L2/L3 Order Book state machine (`rexi::order_book::OrderBook`).
+  - Level 1: $O(1)$ best bid, best ask, top quote quantities, and spread.
+  - Level 2: Real-time price level volume and order count aggregation, ordered market depth views, and instant empty level cleanup.
+  - Level 3: Individual `RestingOrder` tracking with strict FIFO queue priority, $O(1)$ OrderId lookup and cancellation via `order_index_`, and exact queue position indexing.
+  - Explicit mutation semantics: priority preserved on quantity decrease; priority lost on quantity increase or price change.
+  - Phase 04 Market Data Protocol integration: native application of `OrderBookSnapshotMessage`, `OrderBookAddMessage`, `OrderBookModifyMessage`, `OrderBookDeleteMessage`.
+  - Invariant validation: 15-point internal consistency check verifying L2/L3 agreement and sorting.
+  - Performance: 0.23 ns best-price lookup, 0.76 ns L3 lookup, 1.08 ns quantity reduction, 390 ns cancellation.
+- **Engineering Quality:** 80/80 GoogleTests passing across all test suites in Debug and Release builds.
 
 ---
 
-## Active Phase Progress (Phase 04)
+## Active Phase Progress (Phase 05)
 
-- [x] Design market data primitives and strongly typed IDs ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/types.hpp))
-- [x] Implement canonical 40-byte header ([message_header.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/message_header.hpp))
-- [x] Implement trivially copyable message payloads ([messages.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/messages.hpp))
-- [x] Implement deterministic 32-bit FNV-1a checksum verification ([checksum.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/checksum.hpp))
-- [x] Implement sequence manager with gap detection and reset semantics ([sequence_manager.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/sequence_manager.hpp))
-- [x] Implement structural message validator ([validator.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/validator.hpp))
-- [x] Implement adapter normalization contract and container ([normalizer.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/normalizer.hpp))
-- [x] Integrate market data events with Phase 02 event system ([events.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/events.hpp))
-- [x] Implement simulator-to-protocol bridge ([simulator_bridge.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/market_data/simulator_bridge.hpp))
-- [x] Implement comprehensive unit, integration, and determinism tests ([tests/unit/](file:///Users/rexjohnabraham/Documents/REXI/tests/unit), [tests/integration/](file:///Users/rexjohnabraham/Documents/REXI/tests/integration))
-- [x] Implement market data performance microbenchmarks ([benchmark_market_data.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_market_data.cpp))
-- [x] Author Market Data Protocol Architecture Manual ([REXI_MARKET_DATA_PROTOCOL.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_MARKET_DATA_PROTOCOL.md)) and ADR ([ADR-0004](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0004-market-data-protocol.md))
-- [x] Generate Phase 04 Checkpoint Archive ([PHASE_04_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_04_CHECKPOINT.md))
+- [x] Design order book types, enums, and views ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/order_book/types.hpp))
+- [x] Implement trivially copyable resting order struct ([resting_order.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/order_book/resting_order.hpp))
+- [x] Implement price level with aggregates and FIFO list ([price_level.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/order_book/price_level.hpp))
+- [x] Implement canonical L1/L2/L3 OrderBook state machine ([order_book.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/order_book/order_book.hpp))
+- [x] Integrate order book events with Phase 02 event architecture ([events.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/order_book/events.hpp))
+- [x] Implement comprehensive unit tests for types, L1/L2, and L3 ([tests/unit/](file:///Users/rexjohnabraham/Documents/REXI/tests/unit))
+- [x] Implement Phase 04 market data application tests ([test_order_book_market_data.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_order_book_market_data.cpp))
+- [x] Implement deterministic replay and fixed-seed stress tests ([test_order_book_determinism.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_order_book_determinism.cpp))
+- [x] Implement end-to-end simulator-to-order-book integration pipeline ([test_order_book_pipeline.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_order_book_pipeline.cpp))
+- [x] Implement order book microbenchmark suite ([benchmark_order_book.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_order_book.cpp))
+- [x] Author Order Book Architecture Manual ([REXI_ORDER_BOOK.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_ORDER_BOOK.md)) and ADR ([ADR-0005](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0005-order-book.md))
+- [x] Generate Phase 05 Checkpoint Archive ([PHASE_05_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_05_CHECKPOINT.md))
 
 ---
 
-## Next Action Plan (Phase 05)
+## Next Action Plan (Phase 06)
 
-- **Target Phase:** PHASE 05 — L2/L3 Order Book
+- **Target Phase:** PHASE 06 — High Performance Data Structures
 - **Objectives:**
-  1. Build high-performance Level 2 (price-aggregated) order book data structure.
-  2. Build high-performance Level 3 (order-by-order) order book data structure.
-  3. Implement order book snapshot recovery and incremental update processing driven by Phase 04 Market Data Protocol messages.
-  4. Ensure sub-microsecond book update latencies and zero dynamic heap allocation in steady-state operations.
+  1. Build zero-allocation memory pools and cache-aligned arena allocators.
+  2. Implement flat-array fixed-capacity price ladders for dense market depth.
+  3. Implement fast-lookup symbol tables and compact cacheline-aligned circular queues.
+  4. Benchmark and profile custom data structures against standard containers in Phase 02–05 hot paths.

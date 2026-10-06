@@ -17,9 +17,15 @@ add_executable(rexi_unit_tests
     unit/test_market_data_normalizer.cpp
     unit/test_market_data_events.cpp
     unit/test_market_data_determinism.cpp
+    unit/test_order_book_types.cpp
+    unit/test_order_book_l1_l2.cpp
+    unit/test_order_book_l3.cpp
+    unit/test_order_book_market_data.cpp
+    unit/test_order_book_determinism.cpp
     integration/test_event_concurrency.cpp
     integration/test_exchange_scenario.cpp
     integration/test_market_data_integration.cpp
+    integration/test_order_book_pipeline.cpp
 )
 
 target_link_libraries(rexi_unit_tests PRIVATE

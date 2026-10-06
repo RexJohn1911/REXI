@@ -133,3 +133,20 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0024: Monotonic Sequence Manager with Explicit Gap & Reset Semantics
 - **Decision:** Track message streams per feed using `SequenceManager` with explicit typed outcomes (`Expected`, `Duplicate`, `Gap`, `OutOfOrder`, `ResetRequired`), refusing silent repair of sequence gaps.
 - **Rationale:** Guarantees that feed discontinuities and session resets are transparently observable to downstream order book and replay consumers.
+
+### DEC-0025: Price Level Map with Doubly Linked List FIFO Queue & Hash Node Index
+- **Decision:** Implement canonical order book using sorted price level maps (`std::map<Price, PriceLevel>`) with doubly linked list order queues (`std::list<RestingOrder>`) and hash index storing list iterators (`std::unordered_map<OrderId, OrderLocation>`).
+- **Rationale:** Guarantees $O(1)$ order cancellation and $O(1)$ quantity reductions without shifting elements or invalidating other orders' positions, while maintaining strict FIFO queue ordering.
+- **Reference:** [ADR-0005](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0005-order-book.md)
+
+### DEC-0026: Explicit Priority Rules on Order Modification
+- **Decision:** Quantity reductions at the same price preserve FIFO priority in-place; quantity increases lose priority and move the order to the back of the queue; price changes leave the old price level and join the back of the new level.
+- **Rationale:** Mirrors canonical exchange matching engine rules, prevents priority gaming, and provides unambiguous deterministic state transitions.
+
+### DEC-0027: Dual Snapshot Model (L2 Aggregated vs Native L3)
+- **Decision:** Distinguish between Phase 04 aggregated L2 snapshots (which reconstruct price levels without fabricating synthetic OrderIds) and native L3 snapshots (which capture explicit resting order identities and queue positions).
+- **Rationale:** Prevents polluting the order book state machine with fake identities while supporting full-depth state checkpointing.
+
+### DEC-0028: Configurable Locked/Crossed Market Policy
+- **Decision:** Support explicit `CrossedBookPolicy`: `Reject` (default for matching engine books, rejecting updates crossing the spread) vs `Allow` (for reconstructing external market data feeds where crossed markets temporarily occur).
+- **Rationale:** Keeps matching engine invariant enforcement strict while allowing flexible adaptation to noisy real-world feed streams.

@@ -1,7 +1,7 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
 **System:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 04 (Market Data Protocol) — COMPLETED
+**Current Phase:** PHASE 05 (L2/L3 Order Book) — COMPLETED
 **Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
@@ -23,8 +23,8 @@
 - [x] **PHASE 04 — Market Data Protocol**
   - Strongly typed market data primitives, 40-byte canonical header, trivially copyable payloads (TopOfBook, Trade, L2/L3 messages, Snapshot, Status), FNV-1a checksum verification, deterministic sequence tracking & gap handling, structural validation, normalization contract, Phase 02 event traits integration, simulator bridge.
 
-- [ ] **PHASE 05 — L2/L3 Order Book**
-  - High-performance price ladder, direct indexed level pools, order queue position tracking, snapshot/delta synchronizer.
+- [x] **PHASE 05 — L2/L3 Order Book**
+  - Canonical deterministic L1/L2/L3 order book, FIFO queuing, L2 volume & order count aggregation, O(1) order lookup/cancellation index, priority preservation rules, Phase 04 message application, dual snapshot models, comprehensive invariant validation.
 
 - [ ] **PHASE 06 — High Performance Data Structures**
   - Memory pools, cache-aligned circular arrays, fast lookup symbol tables, zero-allocation custom allocators.

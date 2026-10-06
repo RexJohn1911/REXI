@@ -7,6 +7,7 @@ add_executable(rexi_benchmarks
     benchmark_events.cpp
     benchmark_simulator.cpp
     benchmark_market_data.cpp
+    benchmark_order_book.cpp
 )
 
 target_link_libraries(rexi_benchmarks PRIVATE

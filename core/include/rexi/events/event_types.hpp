@@ -36,6 +36,13 @@ enum class EventType : uint16_t {
     MarketDataDelete = 26,
     MarketDataInstrument = 27,
 
+    // Order Book Events (Phase 05)
+    OrderBookOrderAdded = 30,
+    OrderBookOrderModified = 31,
+    OrderBookOrderDeleted = 32,
+    OrderBookOrderReduced = 33,
+    OrderBookBboChanged = 34,
+
     CustomBase = 100
 };
 
@@ -82,6 +89,16 @@ enum class EventType : uint16_t {
             return "MarketDataDelete";
         case EventType::MarketDataInstrument:
             return "MarketDataInstrument";
+        case EventType::OrderBookOrderAdded:
+            return "OrderBookOrderAdded";
+        case EventType::OrderBookOrderModified:
+            return "OrderBookOrderModified";
+        case EventType::OrderBookOrderDeleted:
+            return "OrderBookOrderDeleted";
+        case EventType::OrderBookOrderReduced:
+            return "OrderBookOrderReduced";
+        case EventType::OrderBookBboChanged:
+            return "OrderBookBboChanged";
         case EventType::CustomBase:
             return "CustomBase";
     }
