@@ -6,11 +6,17 @@ add_executable(rexi_unit_tests
     unit/test_version.cpp
     unit/test_events.cpp
     unit/test_spsc_ring_buffer.cpp
+    unit/test_simulator_types.cpp
+    unit/test_matching_engine.cpp
+    unit/test_exchange.cpp
+    unit/test_determinism.cpp
     integration/test_event_concurrency.cpp
+    integration/test_exchange_scenario.cpp
 )
 
 target_link_libraries(rexi_unit_tests PRIVATE
     rexi_core
+    rexi_simulator
     GTest::gtest_main
 )
 

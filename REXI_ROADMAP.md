@@ -1,8 +1,8 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
-**System:** REXI — Real-time EXecution & Intelligence  
-**Current Phase:** PHASE 00 (Constitution & Architecture Foundation)  
-**Total Phases:** 32 (Phase 00 through Phase 31)  
+**System:** REXI — Real-time EXecution & Intelligence
+**Current Phase:** PHASE 03 (Exchange Simulator)
+**Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
 
@@ -17,7 +17,7 @@
 - [x] **PHASE 02 — Core Event Architecture**
   - Nanosecond clock abstractions, high-performance SPSC ring buffers, event dispatcher, EventHeader/Event envelopes, message envelope definitions, and concurrency stress testing.
 
-- [ ] **PHASE 03 — Exchange Simulator**
+- [x] **PHASE 03 — Exchange Simulator**
   - Deterministic matching engine, price-time priority, maker/taker mechanics, cancelation processing, deterministic time stepping.
 
 - [ ] **PHASE 04 — Market Data Protocol**

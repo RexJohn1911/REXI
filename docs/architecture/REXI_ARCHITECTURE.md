@@ -1,8 +1,8 @@
 # REXI Architecture Specification
 
-**Project:** REXI — Real-time EXecution & Intelligence  
-**Phase:** 00 — Constitution & Architecture Foundation  
-**Status:** Active  
+**Project:** REXI — Real-time EXecution & Intelligence
+**Phase:** 00 — Constitution & Architecture Foundation
+**Status:** Active
 
 ---
 

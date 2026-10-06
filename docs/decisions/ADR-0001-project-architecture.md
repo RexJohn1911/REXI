@@ -1,9 +1,9 @@
 # ADR-0001: REXI Core Project Architecture & Two-World System Separation
 
-**Status:** Accepted  
-**Date:** 2026-10-06  
-**Deciders:** REXI Lead Architecture Team  
-**Consulted:** Core Engineering & Quantitative Research  
+**Status:** Accepted
+**Date:** 2026-10-06
+**Deciders:** REXI Lead Architecture Team
+**Consulted:** Core Engineering & Quantitative Research
 
 ---
 

@@ -1,8 +1,8 @@
 # REXI Core Event Architecture Specification
 
-**Project:** REXI — Real-time EXecution & Intelligence  
-**Phase:** 02 — Core Event Architecture  
-**Status:** Active  
+**Project:** REXI — Real-time EXecution & Intelligence
+**Phase:** 02 — Core Event Architecture
+**Status:** Active
 
 ---
 

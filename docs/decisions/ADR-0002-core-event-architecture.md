@@ -1,9 +1,9 @@
 # ADR-0002: Core Event Architecture & Concurrency Model
 
-**Status:** Accepted  
-**Date:** 2026-10-06  
-**Deciders:** REXI Lead Architecture Team  
-**Consulted:** Core HFT & Microstructure Engineering  
+**Status:** Accepted
+**Date:** 2026-10-06
+**Deciders:** REXI Lead Architecture Team
+**Consulted:** Core HFT & Microstructure Engineering
 
 ---
 

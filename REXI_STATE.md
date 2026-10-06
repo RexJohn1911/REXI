@@ -1,44 +1,47 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 02 — Core Event Architecture
+**Current Phase:** PHASE 03 — Exchange Simulator
 **Phase Status:** COMPLETED
-**Next Phase:** PHASE 03 — Exchange Simulator
+**Next Phase:** PHASE 04 — Market Data Protocol
 **Last Updated:** 2026-10-06
 
 ---
 
 ## Current System State Summary
 
-- **Core Event Architecture:** Strongly typed, zero-allocation C++20 event messaging backbone with 24-byte cache-aligned `EventHeader`, monotonic nanosecond clock provider (`MonotonicClock`), and trivial copyability enforcement via `EventTraits`.
-- **Concurrency & Queuing:** Wait-free bounded `SpscRingBuffer<T, Capacity>` with 64-byte cache line separation, power-of-2 index masking, and Acquire/Release atomic synchronization. ThreadSanitizer verified with 0 data races.
-- **Routing & Dispatch:** Direct-indexed `EventDispatcher` (< 1.0 ns single-subscriber dispatch) and channel-based `EventBus` combining synchronous and asynchronous transport.
-- **Engineering Foundation:** Modern C++20 CMake presets (Debug, Release), GoogleTest (17/17 tests passing), Google Benchmark, and Python research tooling (`pytest`, `ruff`, `mypy`).
+- **Exchange Simulator:** Deterministic in-memory price-time priority matching engine (`Exchange`, `MatchingEngine`, `OrderBook`) supporting Limit and Market orders, resting-order execution pricing, partial fills, multi-level sweeps, and deterministic liquidity exhaustion cancellation.
+- **Fixed-Point Arithmetic:** `Price = int64_t` ticks and `Quantity = uint64_t` lots, eliminating floating-point rounding drift.
+- **Deterministic Time & Priority:** Explicit controllable `SimulationClock` and strictly monotonic exchange `SequenceNum`.
+- **Event Architecture Integration:** Strongly typed exchange events (`OrderAccepted`, `OrderRejected`, `OrderCancelled`, `OrderFilled`, `TradeExecuted`, `TopQuoteUpdated`) dispatched through Phase 02 `EventDispatcher`.
+- **Engineering Quality:** 35/35 GoogleTests passing in Debug, Release, and TSAN configurations, with 100% identical determinism validation across runs.
 
 ---
 
-## Active Phase Progress
+## Active Phase Progress (Phase 03)
 
-- [x] Design and implement nanosecond monotonic clock provider ([clock.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/clock.hpp))
-- [x] Create strongly typed event identifiers and source attributes ([event_types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_types.hpp), [source_id.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/source_id.hpp))
-- [x] Implement standardized 24-byte `EventHeader` ([event_header.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_header.hpp))
-- [x] Implement `Event<Payload>` envelope with compile-time `EventTraits` ([event.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event.hpp))
-- [x] Implement standard foundation testing payloads ([foundation_events.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/foundation_events.hpp))
-- [x] Implement wait-free bounded `SpscRingBuffer` ([spsc_ring_buffer.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/spsc_ring_buffer.hpp))
-- [x] Implement zero-allocation `EventDispatcher` and `EventBus` ([event_dispatcher.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_dispatcher.hpp), [event_bus.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/events/event_bus.hpp))
-- [x] Implement unit and concurrency integration tests ([test_events.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_events.cpp), [test_spsc_ring_buffer.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_spsc_ring_buffer.cpp), [test_event_concurrency.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_event_concurrency.cpp))
-- [x] Implement microbenchmarks ([benchmark_events.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_events.cpp))
-- [x] Author Event Architecture Manual ([REXI_EVENT_ARCHITECTURE.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_EVENT_ARCHITECTURE.md)) and ADR ([ADR-0002](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0002-core-event-architecture.md))
-- [x] Generate Phase 02 Checkpoint Archive ([PHASE_02_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_02_CHECKPOINT.md))
+- [x] Design fixed-point price/quantity types and strongly typed IDs ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/types.hpp))
+- [x] Implement tradable instrument specification and validation rules ([instrument.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/instrument.hpp))
+- [x] Implement order entity model and lifecycle transitions ([order.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/order.hpp))
+- [x] Implement immutable trade execution record model ([execution.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/execution.hpp))
+- [x] Implement deterministic controllable simulation clock ([clock.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/clock.hpp))
+- [x] Implement typed exchange simulator events and traits ([events.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/events.hpp))
+- [x] Implement price-time priority limit order book ([order_book.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/order_book.hpp))
+- [x] Implement deterministic matching engine with resting pricing ([matching_engine.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/matching_engine.hpp))
+- [x] Implement exchange session controller ([session.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/session.hpp))
+- [x] Implement top-level exchange facade ([exchange.hpp](file:///Users/rexjohnabraham/Documents/REXI/simulator/include/rexi/simulator/exchange.hpp))
+- [x] Implement unit, integration, and mandatory determinism tests ([tests/unit/](file:///Users/rexjohnabraham/Documents/REXI/tests/unit), [tests/integration/](file:///Users/rexjohnabraham/Documents/REXI/tests/integration))
+- [x] Implement exchange performance microbenchmarks ([benchmark_simulator.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_simulator.cpp))
+- [x] Author Simulator Architecture Manual ([REXI_EXCHANGE_SIMULATOR.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_EXCHANGE_SIMULATOR.md)) and ADR ([ADR-0003](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0003-exchange-simulator.md))
+- [x] Generate Phase 03 Checkpoint Archive ([PHASE_03_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_03_CHECKPOINT.md))
 
 ---
 
-## Next Action Plan (Phase 03)
+## Next Action Plan (Phase 04)
 
-- **Target Phase:** PHASE 03 — Exchange Simulator
+- **Target Phase:** PHASE 04 — Market Data Protocol
 - **Objectives:**
-  1. Design deterministic order book matching engine in `simulator/exchange/` (price-time priority FIFO).
-  2. Implement limit order placement, cancelation, modification, and execution fill event generation.
-  3. Implement deterministic maker/taker mechanics and fee/rebate accounting hooks.
-  4. Connect exchange simulator outputs to Phase 02 event streams.
-  5. Validate matching correctness with deterministic test suites and microbenchmarks.
+  1. Define binary wire message format for market data feeds (ticks, top of book, trades).
+  2. Implement zero-allocation binary encoders and decoders.
+  3. Build market data feed simulation streaming from Phase 03 Exchange events.
+  4. Validate serialization round-trip correctness, determinism, and sub-microsecond throughput.

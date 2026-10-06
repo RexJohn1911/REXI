@@ -24,6 +24,10 @@ This document tracks all high-level technical decisions, standards, and conventi
 | **DEC-0014** | 2026-10-06 | Events | Compile-time `EventTraits` enforcing trivial copyability for zero allocations | Accepted |
 | **DEC-0015** | 2026-10-06 | Concurrency | Wait-free bounded `SpscRingBuffer` with 64-byte cache line padding | Accepted |
 | **DEC-0016** | 2026-10-06 | Routing | Direct-indexed non-allocating `EventDispatcher` and channel `EventBus` | Accepted |
+| **DEC-0017** | 2026-10-06 | Simulator | Integer fixed-point Price (`int64_t`) and Quantity (`uint64_t`) representation | Accepted |
+| **DEC-0018** | 2026-10-06 | Simulator | Price-time priority matching with resting-order trade execution pricing | Accepted |
+| **DEC-0019** | 2026-10-06 | Simulator | Deterministic market order exhaustion remainder cancellation policy | Accepted |
+| **DEC-0020** | 2026-10-06 | Simulator | Deterministic single-threaded matching decoupled from wall-clock time | Accepted |
 
 ---
 
@@ -95,3 +99,20 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0016: Direct Lookup Event Dispatcher
 - **Decision:** `EventDispatcher` uses direct table indexing over `EventType` without runtime string lookups or dynamic reflection.
 - **Rationale:** Sub-nanosecond dispatch latency per subscriber and zero dynamic heap allocation on the hot path.
+
+### DEC-0017: Integer Fixed-Point Price and Quantity Representation
+- **Decision:** Represent prices as integer multiples of ticks (`int64_t Price`) and quantities as integer lots (`uint64_t Quantity`). Floating-point types are strictly forbidden in matching engine comparisons.
+- **Rationale:** Guarantees 100% exact comparisons, eliminates IEEE 754 precision drift, and ensures deterministic order book crossing outcomes.
+- **Reference:** [ADR-0003](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0003-exchange-simulator.md)
+
+### DEC-0018: Price-Time Priority Matching with Resting-Order Pricing
+- **Decision:** Matching engine strictly executes highest Bids and lowest Asks first, with FIFO ordering at each price level. Executions across the spread take the resting order's price.
+- **Rationale:** Conforms to standard continuous double auction market microstructure principles while maintaining exact determinism.
+
+### DEC-0019: Deterministic Market Order Liquidity Exhaustion Policy
+- **Decision:** Market orders consume all available opposite-side liquidity. If the opposing book is exhausted before the order is fully filled, the unfilled remainder is cancelled immediately.
+- **Rationale:** Avoids fabricating synthetic liquidity while guaranteeing unambiguous deterministic state progression.
+
+### DEC-0020: Deterministic Single-Threaded Matching Core
+- **Decision:** The core matching engine executes deterministically in a single thread, advancing time strictly through an explicit `SimulationClock` and monotonic sequence numbering (`SequenceNum`).
+- **Rationale:** Eliminates race conditions, thread scheduling jitter, and non-reproducible test failures, ensuring that identical input sequences produce identical output streams.

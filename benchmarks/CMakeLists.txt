@@ -5,10 +5,12 @@
 add_executable(rexi_benchmarks
     benchmark_foundation.cpp
     benchmark_events.cpp
+    benchmark_simulator.cpp
 )
 
 target_link_libraries(rexi_benchmarks PRIVATE
     rexi_core
+    rexi_simulator
     benchmark::benchmark
 )
 

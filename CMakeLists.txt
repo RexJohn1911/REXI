@@ -73,6 +73,7 @@ endif()
 # Subdirectories
 # ------------------------------------------------------------------------------
 add_subdirectory(core)
+add_subdirectory(simulator)
 
 if(REXI_ENABLE_TESTING)
     add_subdirectory(tests)

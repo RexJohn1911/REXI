@@ -17,6 +17,15 @@ enum class EventType : uint16_t {
     Heartbeat = 2,
     SystemStatus = 3,
     TestEvent = 4,
+
+    // Exchange Simulator Events (Phase 03)
+    OrderAccepted = 10,
+    OrderRejected = 11,
+    OrderCancelled = 12,
+    OrderFilled = 13,
+    TradeExecuted = 14,
+    TopQuoteUpdated = 15,
+
     CustomBase = 100
 };
 
@@ -35,6 +44,18 @@ enum class EventType : uint16_t {
             return "SystemStatus";
         case EventType::TestEvent:
             return "TestEvent";
+        case EventType::OrderAccepted:
+            return "OrderAccepted";
+        case EventType::OrderRejected:
+            return "OrderRejected";
+        case EventType::OrderCancelled:
+            return "OrderCancelled";
+        case EventType::OrderFilled:
+            return "OrderFilled";
+        case EventType::TradeExecuted:
+            return "TradeExecuted";
+        case EventType::TopQuoteUpdated:
+            return "TopQuoteUpdated";
         case EventType::CustomBase:
             return "CustomBase";
     }

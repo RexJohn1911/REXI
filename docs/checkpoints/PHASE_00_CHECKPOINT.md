@@ -1,9 +1,9 @@
 # REXI Checkpoint — Phase 00
 
-**Phase:** PHASE 00 — Constitution & Architecture Foundation  
-**Status:** COMPLETED  
-**Date:** 2026-10-06  
-**Target Platform:** macOS (Development) / Linux (Production)  
+**Phase:** PHASE 00 — Constitution & Architecture Foundation
+**Status:** COMPLETED
+**Date:** 2026-10-06
+**Target Platform:** macOS (Development) / Linux (Production)
 
 ---
 
