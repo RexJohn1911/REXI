@@ -11,8 +11,8 @@
 - [x] **PHASE 00 — Constitution & Architecture Foundation**
   - Establish project charter, two-world architecture (C++ production vs. Python research), folder discipline, safety boundaries, platform strategy (macOS -> Linux), and system documentation.
 
-- [ ] **PHASE 01 — Repository & Engineering Foundation**
-  - Toolchain bootstrap (CMake, Ninja, Clang/GCC, Python environment), linting/formatting hooks (clang-format, clang-tidy, ruff, black), testing harnesses (GoogleTest, pytest), and CI workflows.
+- [x] **PHASE 01 — Repository & Engineering Foundation**
+  - Toolchain bootstrap (CMake, Ninja, Clang/GCC, Python environment), linting/formatting hooks (clang-format, clang-tidy, ruff), testing harnesses (GoogleTest, pytest, Google Benchmark), and multi-platform CI workflows.
 
 - [ ] **PHASE 02 — Core Event Architecture**
   - Nanosecond clock abstractions, high-performance ring buffers, event dispatcher, lock-free queues, message envelope definitions.

@@ -16,6 +16,10 @@ This document tracks all high-level technical decisions, standards, and conventi
 | **DEC-0006** | 2026-10-06 | Data Storage | Apache Arrow and Parquet for research and intermediate representations | Accepted |
 | **DEC-0007** | 2026-10-06 | UI / Dashboard | Future dashboard uses Claymorphism (tactile, non-collapsing, quantitative density) | Accepted |
 | **DEC-0008** | 2026-10-06 | Discipline | Strict single-canonical-location folder discipline | Accepted |
+| **DEC-0009** | 2026-10-06 | Toolchain | Standardized CMakePresets.json with Debug and Release profiles | Accepted |
+| **DEC-0010** | 2026-10-06 | Code Style | C++ namespace `rexi` with Google/C++20 clang-format standards | Accepted |
+| **DEC-0011** | 2026-10-06 | Python Setup | Centralized pyproject.toml for pytest, ruff, and mypy | Accepted |
+| **DEC-0012** | 2026-10-06 | Dependencies | FetchContent shallow clones for GoogleTest v1.14.0 and Benchmark v1.8.3 | Accepted |
 
 ---
 
@@ -54,3 +58,19 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0008: Folder Discipline
 - **Decision:** Every file has exactly one canonical location. No random folders, no duplicate source files, and no ad-hoc folder creation.
 - **Rationale:** Ensures clean scalability across all 32 development phases.
+
+### DEC-0009: CMake Presets Specification
+- **Decision:** Maintain `CMakePresets.json` with standardized `debug` and `release` configure, build, and test presets using `build/debug` and `build/release` out-of-source directories.
+- **Rationale:** Provides identical, one-command builds across developer workstations and CI runners.
+
+### DEC-0010: C++ Namespace and Style Conventions
+- **Decision:** Root namespace is `rexi`, with subsystem namespaces such as `rexi::core`, `rexi::events`, `rexi::tests`, `rexi::benchmarks`. Formatting strictly enforced via `.clang-format` (Google baseline with C++20 standard).
+- **Rationale:** Avoids namespace collisions and ensures code formatting consistency across all contributors.
+
+### DEC-0011: Centralized Python Packaging
+- **Decision:** Centralize all Python tooling configuration (`pytest`, `ruff`, `mypy`) within `pyproject.toml` in the repository root.
+- **Rationale:** Eliminates scattered configuration files and guarantees uniform linting and type-checking rules.
+
+### DEC-0012: Reproducible C++ Test/Benchmark Dependencies
+- **Decision:** Fetch GoogleTest (v1.14.0) and Google Benchmark (v1.8.3) via CMake `FetchContent` using shallow git tags.
+- **Rationale:** Ensures hermetic, zero-dependency builds without requiring global system package installations or committing third-party code.

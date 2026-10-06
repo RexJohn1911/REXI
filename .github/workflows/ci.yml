@@ -1,0 +1,89 @@
+name: REXI Engineering Foundation CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpp-matrix-build:
+    name: C++20 Build & Test (${{ matrix.os }} - ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        build_type: [Debug, Release]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake build-essential clang
+
+      - name: Install Dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja cmake
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DREXI_ENABLE_TESTING=ON \
+            -DREXI_ENABLE_BENCHMARKS=ON
+
+      - name: Build C++ Targets
+        run: |
+          cmake --build build --parallel
+
+      - name: Run CTest Unit Tests
+        run: |
+          ctest --test-dir build --output-on-failure
+
+      - name: Run Smoke Benchmark
+        run: |
+          ./build/benchmarks/rexi_benchmarks --benchmark_min_time=0.01s
+
+  python-quality-and-test:
+    name: Python Research Foundation & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest ruff mypy clang-format
+
+      - name: Validate C++ Formatting (clang-format)
+        run: |
+          clang-format --dry-run --Werror core/include/rexi/*.hpp core/src/*.cpp tests/unit/*.cpp benchmarks/*.cpp
+
+      - name: Run Ruff Linting
+        run: |
+          ruff check .
+
+      - name: Run Mypy Type Checking
+        run: |
+          mypy research ml tests/unit/test_research_foundation.py
+
+      - name: Run Pytest
+        run: |
+          pytest

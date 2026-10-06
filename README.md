@@ -53,7 +53,36 @@ REXI separates execution and research into two dedicated engines:
 
 ---
 
-## 3. Directory Layout
+## 3. Engineering Quickstart
+
+Comprehensive build, test, and linting instructions are documented in the [Toolchain Guide](file:///Users/rexjohnabraham/Documents/REXI/docs/engineering/TOOLCHAIN.md).
+
+### C++ Engine (CMake & Ninja)
+```bash
+# Configure, build, and test (Debug)
+cmake --preset debug
+cmake --build --preset debug
+ctest --test-dir build/debug --output-on-failure
+
+# Configure, build, and benchmark (Release)
+cmake --preset release
+cmake --build --preset release
+./build/release/benchmarks/rexi_benchmarks
+```
+
+### Python Research Engine
+```bash
+# Run test suite
+pytest
+
+# Run linter and type checker
+ruff check .
+mypy research ml tests/unit/test_research_foundation.py
+```
+
+---
+
+## 4. Directory Layout
 
 REXI enforces strict single-canonical-location folder discipline:
 
@@ -103,6 +132,7 @@ REXI/
 ├── docs/                           # Documentation
 │   ├── architecture/               # Architecture specifications
 │   ├── decisions/                  # Architectural Decision Records (ADRs)
+│   ├── engineering/                # Toolchain and developer workflows
 │   ├── research/                   # Research notes and whitepapers
 │   └── checkpoints/                # Phase checkpoint archives
 ├── data/                           # Data storage (git-ignored)
@@ -118,19 +148,20 @@ REXI/
 
 ---
 
-## 4. Key Documentation Links
+## 5. Key Documentation Links
 
 - **Architecture Manual:** [REXI_ARCHITECTURE.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_ARCHITECTURE.md)
+- **Engineering Toolchain Guide:** [TOOLCHAIN.md](file:///Users/rexjohnabraham/Documents/REXI/docs/engineering/TOOLCHAIN.md)
 - **Architectural Decision Record 0001:** [ADR-0001](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0001-project-architecture.md)
 - **32-Phase Roadmap:** [REXI_ROADMAP.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_ROADMAP.md)
 - **Architecture Decisions Log:** [REXI_DECISIONS.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_DECISIONS.md)
 - **Known Issues & Constraints:** [REXI_KNOWN_ISSUES.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_KNOWN_ISSUES.md)
 - **Current System State:** [REXI_STATE.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_STATE.md)
-- **Phase 00 Checkpoint:** [PHASE_00_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_00_CHECKPOINT.md)
+- **Phase 01 Checkpoint:** [PHASE_01_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_01_CHECKPOINT.md)
 
 ---
 
-## 5. Current Status
+## 6. Current Status
 
-REXI is currently at **PHASE 00 — Constitution & Architecture Foundation** (Completed).  
-The next planned milestone is **PHASE 01 — Repository & Engineering Foundation**.
+REXI is currently at **PHASE 01 — Repository & Engineering Foundation** (Completed).
+The next planned milestone is **PHASE 02 — Core Event Architecture**.
