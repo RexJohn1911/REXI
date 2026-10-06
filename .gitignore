@@ -1,0 +1,107 @@
+# REXI — Real-time EXecution & Intelligence
+# .gitignore
+
+# C / C++ Build Artifacts
+build/
+bin/
+lib/
+out/
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.dSYM/
+.cmake/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+*.ninja
+.ninja_*
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.gcov
+*.gcda
+*.gcno
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data & Models (Exclude large binary assets from version control)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+models/development/*
+!models/development/.gitkeep
+models/production/*
+!models/production/.gitkeep
+
+# Logs and Runtime Monitoring
+*.log
+logs/
+*.pid
+
+# Secrets and Environment Configuration
+.env
+.env.*
+*.key
+*.pem
+*.secret
+*.p12
+*.crt
+
