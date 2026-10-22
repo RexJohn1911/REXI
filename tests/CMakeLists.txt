@@ -35,6 +35,7 @@ add_executable(rexi_unit_tests
     unit/test_replay_engine.cpp
     unit/test_replay_determinism.cpp
     unit/test_replay_allocation.cpp
+    unit/test_microstructure_features.cpp
     integration/test_event_concurrency.cpp
     integration/test_exchange_scenario.cpp
     integration/test_market_data_integration.cpp

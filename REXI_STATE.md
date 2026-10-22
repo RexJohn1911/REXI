@@ -1,56 +1,45 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 09 — No-Leakage Research Framework
-**Phase Status:** COMPLETED & AUDIT-VERIFIED
-**Next Phase:** PHASE 10 — Microstructure Feature Engine
+**Current Phase:** PHASE 10 — Microstructure Feature Engine
+**Phase Status:** COMPLETED & VALIDATION-PASSED
+**Next Phase:** PHASE 11 — Statistical Strategy Laboratory
 **Last Updated:** 2026-10-22
 
 ---
 
 ## Current System State Summary
 
+- **Microstructure Feature Engine Subsystem:** High-performance, deterministic microstructure feature calculation layer operating under the two-world architecture:
+  - C++ hot-path streaming engine (`core/include/rexi/microstructure/`): zero steady-state heap allocations, contiguous fixed circular ring buffers (`FixedRingBuffer<T, N>`), sub-35-nanosecond update latency (`16.0ns` quote update, `33.2ns` trade update, `17.7ns` depth update), strict temporal monotonicity enforcement, explicit handling and drop counters for out-of-order events.
+  - Python quantitative research engine & pipeline (`research/features/`): vectorized and streaming PyArrow table processing, canonical `MICROSTRUCTURE_FEATURES_SCHEMA_V1` schema, integration with Phase 08 Data Lake `DatasetReader` and `DatasetWriter`, and point-in-time causal validation via Phase 09 `LookaheadDetector`.
+  - Comprehensive feature coverage: Level 1 top of book (spread, relative spread, mid-price, micro-price/weighted mid, top-of-book imbalance), Level 2 multi-level depth imbalance ($K=5$), Cont et al. (2014) Order Flow Imbalance (OFI) instant and rolling, trade flow metrics (signed volume, trade flow imbalance, rolling VWAP), short-horizon mid returns and sample realized volatility, Roll (1984) effective spread, and Easley et al. (2012) VPIN with deterministic bucket boundary splitting.
+  - Explicit validity gating: Every feature possesses a corresponding boolean validity flag (`has_bid`, `has_ask`, `is_crossed`, `has_spread`, `has_mid`, `has_weighted_mid`, `has_book_imbalance`, `has_depth_imbalance`, `has_instant_ofi`, `has_rolling_ofi`, `has_trade`, `has_trade_flow`, `has_vwap`, `has_log_return`, `has_realized_volatility`, `has_roll_spread`, `has_vpin`). Missing quotes, crossed/locked books, insufficient history, or non-negative Roll autocovariances are strictly gated False and never silently defaulted to zero.
 - **No-Leakage Research Framework Subsystem:** Point-in-time causal partitioning, label horizon purging, targeted post-test embargo, and lookahead verification engine (`research.leakage`).
-  - Strict chronological splitting: Train -> [Validation] -> Test, rolling/expanding walk-forward, Purged K-Fold, and Combinatorial Purged Cross-Validation (CPCV) with zero random shuffling.
-  - Mathematically formal interval semantics: half-open partition boundaries $[t_{\text{start}}, t_{\text{end}})$, closed label information intervals $[t_{\text{obs}}, t_{\text{label\_end}}]$, exact-boundary purging, and targeted post-test embargo buffer $[t_{\text{test, end}}, t_{\text{test, end}} + \Delta_{\text{embargo}})$.
-  - Duplicate decision timestamp preservation: boundary cuts never arbitrarily divide identical nanosecond timestamps across train and test partitions.
-  - Point-in-time causal alignment: `PointInTimeAligner` enforces physical ($T_{\text{event}} \le T_{\text{available}}$) and decision ($T_{\text{available}} \le T_{\text{decision}}$) causality via Arrow-native as-of joins with staleness guards.
-  - Verifiable causal auditor: `LookaheadDetector` verifies timestamp availability, physical order, partition disjointness, and purge/embargo compliance.
-  - Phase 08 integration: `DatasetSplitter` creates cryptographically signed `SplitManifest` metadata linked to source Phase 08 `DatasetManifest` SHA-256 without copying or mutating underlying Parquet datasets; `SplitDatasetReader` provides memory-bounded partition projections.
 - **Research Data Lake Subsystem:** Hardened, deterministic, schema-enforced columnar storage tier (`research.datasets`).
-  - Centralized `SchemaRegistry` managing versioned PyArrow schemas for trades, quotes, L3 book updates, depth snapshots, market status, instrument definitions, and unified replay events (including full `OrderBookSnapshotMessage` payload fields).
-  - Strict financial typing: 64-bit signed integer tick prices (`pa.int64()`), discrete lot quantities (`pa.uint64()`), nanosecond timestamps, zero floating-point conversions.
-  - Safe, transactional `DatasetWriter` with 3-phase backup publication swap and non-blocking process file locking (`.lock_{dataset_id}`).
-- **Engineering Quality:** 101/101 Python tests passing, 128/128 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean.
-- **Git State:** Maintained on branch `main` at commit `e613e8e`; working tree preserved uncommitted for user review.
+- **Engineering Quality:** 120/120 Python tests passing, 142/142 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean, `git diff --check` clean.
+- **Git State:** Maintained on branch `main`; working tree preserved uncommitted for user review.
 
 ---
 
-## Active Phase Progress (Phase 09)
+## Active Phase Progress (Phase 10)
 
-- [x] Design domain models, enums, dataclasses, and custom exceptions ([types.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/types.py), [exceptions.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/exceptions.py))
-- [x] Implement timestamp normalization with UTC timezone enforcement and pre-1970 negative epoch support ([types.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/types.py))
-- [x] Implement strict chronological train/val/test holdout, rolling/expanding walk-forward splitters ([split.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/split.py))
-- [x] Implement duplicate decision timestamp boundary preservation ([split.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/split.py))
-- [x] Implement closed label information intervals and de Prado purging ([split.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/split.py))
-- [x] Implement targeted post-test embargo for Purged K-Fold and CPCV ([split.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/split.py))
-- [x] Implement point-in-time as-of causal feature aligner ($T_{\text{avail}} \le T_{\text{decision}}$) ([point_in_time.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/point_in_time.py))
-- [x] Implement verifiable causal leakage auditor ([detector.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/detector.py))
-- [x] Implement Phase 08 Data Lake integration & SplitManifest serialization ([dataset_split.py](file:///Users/rexjohnabraham/Documents/REXI/research/leakage/dataset_split.py))
-- [x] Implement unit tests for types, safety, and intervals ([test_leakage_types_and_safety.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_leakage_types_and_safety.py))
-- [x] Implement unit tests for chronological splits and walk-forward ([test_leakage_chronological_split.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_leakage_chronological_split.py))
-- [x] Implement unit tests for purging, embargo, and Purged K-Fold ([test_leakage_purging_embargo.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_leakage_purging_embargo.py))
-- [x] Implement unit tests for point-in-time alignment and lookahead detector ([test_leakage_point_in_time.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_leakage_point_in_time.py))
-- [x] Implement unit tests for Phase 08 Data Lake integration ([test_leakage_dataset_integration.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_leakage_dataset_integration.py))
-- [x] Implement end-to-end integration test pipeline ([test_leakage_pipeline.py](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_leakage_pipeline.py))
-- [x] Author No-Leakage Research Framework Architecture ([REXI_NO_LEAKAGE_RESEARCH_FRAMEWORK.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_NO_LEAKAGE_RESEARCH_FRAMEWORK.md)) and ADR ([ADR-0009](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0009-no-leakage-research-framework.md))
+- [x] Design C++ microstructure types, fixed ring buffer, and feature engine ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/microstructure/types.hpp), [rolling_window.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/microstructure/rolling_window.hpp), [feature_engine.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/microstructure/feature_engine.hpp))
+- [x] Implement C++ unit tests covering L1, L2 depth, OFI, trade flow, volatility, Roll spread, VPIN, temporal order, and steady-state zero heap allocation ([test_microstructure_features.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_microstructure_features.cpp))
+- [x] Implement C++ microbenchmarks verifying sub-50ns update latency ([benchmark_microstructure.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_microstructure.cpp))
+- [x] Design Python research types, configurations, and canonical PyArrow schema ([types.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/types.py), [schema.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/schema.py))
+- [x] Implement Python MicrostructureFeatureEngine streaming and table extraction ([engine.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/engine.py))
+- [x] Implement Python MicrostructureFeaturePipeline with Phase 08 Data Lake and Phase 09 Leakage safeguards ([pipeline.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/pipeline.py))
+- [x] Implement Python unit tests ([test_microstructure_features.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_microstructure_features.py)) and integration tests ([test_feature_pipeline.py](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_feature_pipeline.py))
+- [x] Author Microstructure Feature Engine Architecture ([REXI_MICROSTRUCTURE_FEATURE_ENGINE.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_MICROSTRUCTURE_FEATURE_ENGINE.md)) and ADR ([ADR-0010](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0010-microstructure-feature-engine.md))
+- [x] Update project decisions log ([REXI_DECISIONS.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_DECISIONS.md)), known issues ([REXI_KNOWN_ISSUES.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_KNOWN_ISSUES.md)), and roadmap ([REXI_ROADMAP.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_ROADMAP.md))
 
 ---
 
-## Next Action Plan (Phase 10)
+## Next Action Plan (Phase 11)
 
-- **Target Phase:** PHASE 10 — Microstructure Feature Engine
+- **Target Phase:** PHASE 11 — Statistical Strategy Laboratory
 - **Objectives:**
-  - Order Flow Imbalance (OFI) feature generator across L2/L3 order book states.
-  - Volume-Synchronized Probability of Toxicity (VPIN).
-  - Micro-price, Roll impact, and queue depletion indicators operating on point-in-time causal event streams.
+  - Pairs trading and cointegration testing framework.
+  - Ornstein-Uhlenbeck parameter estimation and mean-reversion modeling.
+  - Statistical arbitrage signal generators consuming Phase 10 microstructure features.

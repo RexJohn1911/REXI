@@ -59,6 +59,9 @@ This document tracks all high-level technical decisions, standards, and conventi
 | **DEC-0049** | 2026-10-22 | Research | Targeted Post-Test Embargo Applied Exclusively to Following Folds | Accepted |
 | **DEC-0050** | 2026-10-22 | Research | Separation of Feature Observation vs. Availability Time (T_available <= T_decision) | Accepted |
 | **DEC-0051** | 2026-10-22 | Research | Cryptographically Sealed SplitManifest with Phase 08 Dataset Binding | Accepted |
+| **DEC-0052** | 2026-10-22 | Features | Two-World Microstructure Feature Engine (C++ Zero-Alloc Hot-Path + Python Research) | Accepted |
+| **DEC-0053** | 2026-10-22 | Features | Explicit Feature Availability Gating and Prohibition of Silent Default Zeros | Accepted |
+| **DEC-0054** | 2026-10-22 | Features | Canonical Microstructure Formulations (Cont OFI, Roll Spread, VPIN, Trade Flow) | Accepted |
 
 ---
 
@@ -269,3 +272,17 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0051: Cryptographically Sealed SplitManifest with Phase 08 Dataset Binding
 - **Decision:** Split configurations and partition boundaries are serialized into a standardized `SplitManifest` (`manifest.json` v1.0.0) recording source `dataset_id`, source `dataset_manifest_sha256`, exact row index spans, and a self-sealing SHA-256 hash.
 - **Rationale:** Ensures 100% bit-for-bit reproducible train/val/test splits across research environments without copying or duplicating underlying Parquet partition files.
+
+### DEC-0052: Two-World Microstructure Feature Engine Architecture
+- **Decision:** Microstructure feature calculations are dual-architected:
+  1. Low-latency C++ hot-path (`core/include/rexi/microstructure/`): zero steady-state heap allocations, contiguous fixed ring buffers (`FixedRingBuffer<T, N>`), sub-50ns update latency for live trading pipelines.
+  2. Quantitative research Python engine (`research/features/`): vectorized/streaming PyArrow table extraction, Phase 08 Data Lake integration (`MICROSTRUCTURE_FEATURES_SCHEMA_V1`), and Phase 09 lookahead audit.
+- **Rationale:** Enforces clean separation between ultra-low-latency production execution and flexible, point-in-time quantitative research without duplicating business logic formulas.
+
+### DEC-0053: Explicit Feature Availability Gating and Prohibition of Silent Default Zeros
+- **Decision:** Every computed microstructure feature is strictly paired with a boolean validity flag (`has_bid`, `has_ask`, `is_crossed`, `has_spread`, `has_mid`, `has_weighted_mid`, `has_book_imbalance`, `has_depth_imbalance`, `has_instant_ofi`, `has_rolling_ofi`, `has_trade`, `has_trade_flow`, `has_vwap`, `has_log_return`, `has_realized_volatility`, `has_roll_spread`, `has_vpin`). Missing quotes, crossed/locked books, insufficient history, and non-negative Roll autocovariances are never substituted with silent zeros.
+- **Rationale:** Prevents models and signals from confusing missing or invalid data with genuine market conditions (such as zero spread or zero price change), eliminating spurious trading signals.
+
+### DEC-0054: Canonical Microstructure Formulations
+- **Decision:** Formulations follow established quantitative microstructure literature: Cont, Kukanov & Stoikov (2014) for Order Flow Imbalance (OFI); Roll (1984) for effective spread via serial covariance; Easley, Lopez de Prado & O'Hara (2012) for Volume-Synchronized Probability of Toxicity (VPIN); and continuous rolling VWAP/trade flow imbalance.
+- **Rationale:** Ensures mathematical rigor, verifiable correctness, and deterministic equivalence between streaming and batched research evaluations.

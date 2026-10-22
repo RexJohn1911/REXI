@@ -1,7 +1,7 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
 **System:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 09 (No-Leakage Research Framework) — COMPLETED
+**Current Phase:** PHASE 10 (Microstructure Feature Engine) — COMPLETED
 **Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
@@ -38,8 +38,8 @@
 - [x] **PHASE 09 — No-Leakage Research Framework**
   - Temporal causal partitioning, point-in-time feature aligner (T_avail <= T_decision), de Prado label horizon purging, targeted post-test embargo, verifiable causal LookaheadDetector, Phase 08 SplitManifest integration.
 
-- [ ] **PHASE 10 — Microstructure Feature Engine**
-  - Order Flow Imbalance (OFI), Volume-Synchronized Probability of Toxicity (VPIN), Micro-price, Roll impact, Queue depletion rates.
+- [x] **PHASE 10 — Microstructure Feature Engine**
+  - Order Flow Imbalance (OFI), Volume-Synchronized Probability of Toxicity (VPIN), Micro-price, Roll effective spread, Multi-level Depth Imbalance, Realized Volatility, zero-allocation C++ hot path, PyArrow schema, Phase 09 causal leakage integration.
 
 - [ ] **PHASE 11 — Statistical Strategy Laboratory**
   - Pairs trading, cointegration engines, Ornstein-Uhlenbeck mean reversion, statistical arbitrage signal generators.

@@ -20,6 +20,7 @@ This document tracks known issues, risks, technical debt, and architectural cons
 | **CON-0006** | Market Data | Low | Canonical flat `OrderBookSnapshotMessage` is bounded to 16 bid/ask levels for zero heap allocation. | Deeper L2 full-depth snapshots or full-book recovery in Phase 05/07 will use multi-packet chunking or out-of-band snapshot channels. |
 | **CON-0008** | Replay | Low | Phase 07 replay operates strictly sequentially over in-memory event streams without disk-backed indexing or arbitrary random seeks. | Implement Parquet / Arrow chunked streaming adapters and checkpoint-assisted random seek indices in Phase 08+. |
 | **CON-0009** | Storage | Medium | POSIX `rename(2)` / `os.replace` cannot atomically overwrite a non-empty directory over another non-empty directory on macOS/Linux. | `DatasetWriter` implements a 3-phase transactional backup swap (`target -> backup`, `staging -> target`, purge backup on success, rollback on failure) paired with non-blocking process file locks (`.lock_{dataset_id}`). Active readers with open file descriptors remain undisturbed. |
+| **CON-0010** | Features | Low | Roll (1984) spread requires negative lag-1 autocovariance ($\gamma_1 < 0$). In trending or momentum markets, positive autocovariance makes the Roll spread mathematically undefined. | `MicrostructureFeatureEngine` explicitly gates `has_roll_spread = false` without defaulting to silent zeros, ensuring downstream strategies never mistake missing models for zero spread. |
 
 ---
 

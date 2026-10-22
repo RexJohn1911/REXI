@@ -175,6 +175,40 @@ public:
     }
 
     /**
+     * @brief Extract cumulative bid depth quantity across top levels without heap allocations.
+     */
+    [[nodiscard]] Quantity bids_depth_quantity(size_t max_depth = 0) const noexcept {
+        Quantity total = 0;
+        size_t count = 0;
+        for (const auto& [price, level] : bids_) {
+            (void)price;
+            total += level.total_quantity();
+            ++count;
+            if (max_depth > 0 && count >= max_depth) {
+                break;
+            }
+        }
+        return total;
+    }
+
+    /**
+     * @brief Extract cumulative ask depth quantity across top levels without heap allocations.
+     */
+    [[nodiscard]] Quantity asks_depth_quantity(size_t max_depth = 0) const noexcept {
+        Quantity total = 0;
+        size_t count = 0;
+        for (const auto& [price, level] : asks_) {
+            (void)price;
+            total += level.total_quantity();
+            ++count;
+            if (max_depth > 0 && count >= max_depth) {
+                break;
+            }
+        }
+        return total;
+    }
+
+    /**
      * @brief Extract aggregated bid levels ordered best-to-worst (descending).
      */
     [[nodiscard]] std::vector<LevelView> bids_depth(size_t max_depth = 0) const {

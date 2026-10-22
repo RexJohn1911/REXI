@@ -17,6 +17,7 @@ class DatasetKind(str, Enum):
     REPLAY_STREAM = "replay_stream"
     MARKET_STATUS = "market_status"
     INSTRUMENT_DEFINITIONS = "instrument_definitions"
+    FEATURES = "features"
 
 
 class DataDomain(str, Enum):
@@ -27,6 +28,7 @@ class DataDomain(str, Enum):
     EXECUTION = "execution"
     REFERENCE = "reference"
     REPLAY = "replay"
+    FEATURES = "features"
 
 
 class CompressionType(str, Enum):

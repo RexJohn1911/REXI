@@ -9,6 +9,7 @@ add_executable(rexi_benchmarks
     benchmark_market_data.cpp
     benchmark_order_book.cpp
     benchmark_replay.cpp
+    benchmark_microstructure.cpp
 )
 
 target_link_libraries(rexi_benchmarks PRIVATE
