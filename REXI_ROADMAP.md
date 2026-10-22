@@ -1,7 +1,7 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
 **System:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 07 (Historical Market Replay) — COMPLETED
+**Current Phase:** PHASE 09 (No-Leakage Research Framework) — COMPLETED
 **Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
@@ -35,8 +35,8 @@
 - [x] **PHASE 08 — Research Data Lake**
   - Parquet/Arrow tick-level time series storage, partitioned datasets, SchemaRegistry, DatasetWriter with atomic staging, streaming DatasetReader, manifest cryptographic verification.
 
-- [ ] **PHASE 09 — No-Leakage Research Framework**
-  - Temporal causal backtesting engine, point-in-time cross-validation, lookahead detector, statistical verification pipeline.
+- [x] **PHASE 09 — No-Leakage Research Framework**
+  - Temporal causal partitioning, point-in-time feature aligner (T_avail <= T_decision), de Prado label horizon purging, targeted post-test embargo, verifiable causal LookaheadDetector, Phase 08 SplitManifest integration.
 
 - [ ] **PHASE 10 — Microstructure Feature Engine**
   - Order Flow Imbalance (OFI), Volume-Synchronized Probability of Toxicity (VPIN), Micro-price, Roll impact, Queue depletion rates.

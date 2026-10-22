@@ -52,6 +52,13 @@ This document tracks all high-level technical decisions, standards, and conventi
 | **DEC-0042** | 2026-10-22 | Data Lake | Cryptographic SHA-256 Manifest Verification and Replay State Digest Provenance | Accepted |
 | **DEC-0043** | 2026-10-22 | Data Lake | Manifest Path Security, Containment Checks, and Deep Parquet Verification | Accepted |
 | **DEC-0044** | 2026-10-22 | Data Lake | Arrow-Native Partitioning and Statistics Aggregation | Accepted |
+| **DEC-0045** | 2026-10-22 | Data Lake | Coordinated Process Locking Protocol Across Writers, Readers, Recovery, and Cleanup | Accepted |
+| **DEC-0046** | 2026-10-22 | Data Lake | Replay Schema Immutability (V1) and Lossless Depth Snapshot Fidelity (V2) | Accepted |
+| **DEC-0047** | 2026-10-22 | Research | Strict Chronological Partitioning and Prohibition of Shuffling | Accepted |
+| **DEC-0048** | 2026-10-22 | Research | Half-Open Boundaries, Closed Label Horizons, and de Prado Purging | Accepted |
+| **DEC-0049** | 2026-10-22 | Research | Targeted Post-Test Embargo Applied Exclusively to Following Folds | Accepted |
+| **DEC-0050** | 2026-10-22 | Research | Separation of Feature Observation vs. Availability Time (T_available <= T_decision) | Accepted |
+| **DEC-0051** | 2026-10-22 | Research | Cryptographically Sealed SplitManifest with Phase 08 Dataset Binding | Accepted |
 
 ---
 
@@ -242,3 +249,23 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0046: Replay Schema Immutability (V1) and Lossless Depth Snapshot Fidelity (V2)
 - **Decision:** `REPLAY_EVENT_SCHEMA_V1` (`v1.0.0`, 32 columns) is preserved strictly immutable for backward compatibility. `REPLAY_EVENT_SCHEMA_V2` (`v1.1.0`, 37 columns) introduces full `OrderBookSnapshotMessage` payload fidelity (`last_included_sequence`, `bid_levels_count`, `ask_levels_count`, and nested struct lists `bids` and `asks` with `price`, `quantity`, `order_count`). Readers transparently detect schema versions from `manifest.json`.
 - **Rationale:** Honors schema versioning immutability: snapshot payloads were never recorded in V1 datasets and cannot be losslessly reconstructed from V1 data. V2 provides 100% bit-for-bit replay book reconstruction.
+
+### DEC-0047: Strict Chronological Partitioning and Prohibition of Shuffling
+- **Decision:** All research partitions (Train, Validation, Test, Walk-Forward, and CV blocks) are partitioned strictly in temporal order. Random shuffling of time-series observations is strictly prohibited throughout REXI. Duplicate decision timestamps at boundaries are deterministically kept together in the same partition.
+- **Rationale:** Random shuffling leaks future regime and autocorrelation information into training sets, rendering backtest statistics fundamentally invalid.
+
+### DEC-0048: Half-Open Boundaries, Closed Label Horizons, and de Prado Purging
+- **Decision:** Partition time boundaries are defined as half-open $[t_{\text{start}}, t_{\text{end}})$, while label information intervals are defined as closed $[t_{\text{obs}}, t_{\text{label\_end}}]$. Training samples whose label intervals touch evaluation partitions ($t_{\text{obs}} < t_{\text{test, end}}$ and $t_{\text{label\_end}} \ge t_{\text{test, start}}$) are purged.
+- **Rationale:** Eliminates boundary ambiguities and prevents future return information from leaking across partition boundaries into training weights.
+
+### DEC-0049: Targeted Post-Test Embargo Applied Exclusively to Following Folds
+- **Decision:** Embargo buffers ($[t_{\text{test, end}}, t_{\text{test, end}} + \Delta_{\text{embargo}})$) are applied strictly to post-test training data in cross-validation (e.g. Purged K-Fold). Embargo is never applied to pre-test training samples or standard chronological holdout where training precedes testing.
+- **Rationale:** Eliminates autoregressive and serial correlation leakage from test periods into immediately following training samples without needlessly discarding valid pre-test training data.
+
+### DEC-0050: Separation of Feature Observation vs. Availability Time
+- **Decision:** Feature schemas and alignment engines explicitly differentiate between `event_timestamp_ns` (when physical market event occurred) and `available_timestamp_ns` (when feature was realistically received and computed). Decisions at $T_{\text{decision}}$ may only observe features satisfying $T_{\text{available}} \le T_{\text{decision}}$.
+- **Rationale:** Models actual execution realities (feed latency, network jitter, computation delay), eliminating lookahead bias in signal generation.
+
+### DEC-0051: Cryptographically Sealed SplitManifest with Phase 08 Dataset Binding
+- **Decision:** Split configurations and partition boundaries are serialized into a standardized `SplitManifest` (`manifest.json` v1.0.0) recording source `dataset_id`, source `dataset_manifest_sha256`, exact row index spans, and a self-sealing SHA-256 hash.
+- **Rationale:** Ensures 100% bit-for-bit reproducible train/val/test splits across research environments without copying or duplicating underlying Parquet partition files.
