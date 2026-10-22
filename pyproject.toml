@@ -11,7 +11,9 @@ requires-python = ">=3.10"
 authors = [
     { name = "REXI Quantitative Architecture Team" }
 ]
-dependencies = []
+dependencies = [
+    "pyarrow>=14.0.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -78,3 +80,10 @@ warn_unused_ignores = true
 warn_no_return = true
 show_error_codes = true
 exclude = ["build/.*"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pyarrow",
+    "pyarrow.*",
+]
+ignore_missing_imports = true

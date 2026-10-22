@@ -1,55 +1,57 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 07 — Historical Market Replay
-**Phase Status:** COMPLETED
-**Next Phase:** PHASE 08 — Research Data Lake & Ingestion Pipeline
-**Last Updated:** 2026-10-06
+**Current Phase:** PHASE 08 — Research Data Lake
+**Phase Status:** COMPLETED & AUDIT-VERIFIED
+**Next Phase:** PHASE 09 — No-Leakage Research Framework
+**Last Updated:** 2026-10-22
 
 ---
 
 ## Current System State Summary
 
-- **Historical Market Replay Subsystem:** Fully verified, deterministic replay engine (`rexi::replay::ReplayEngine`).
-  - Strict total event ordering contract via `ReplayEventComparator` (Feed sequence > Source timestamp > Receive timestamp > Feed IDs > Input index).
-  - Pure deterministic `ReplayClock` with zero wall-clock dependency.
-  - Step mode, max-speed mode, configurable stop conditions, and Phase 02 `EventDispatcher` integration.
-  - Seamless integration with canonical Phase 04 `MarketDataHeader`/messages and Phase 05/06 `OrderBook`.
-  - Zero dynamic heap allocations during steady-state in-memory stream replay into pre-warmed books.
-  - Canonical 64-bit FNV-1a state digest ensuring bit-for-bit determinism across independent runs.
-  - Performance: 22.5 ns/event (~44.3M events/sec) for 1k batches; 60.7 ns/event (~16.5M events/sec) for 100k events on Apple Silicon.
-- **Engineering Quality:** 128/128 GoogleTests passing across Debug, Release, and ASan/UBSan builds.
+- **Research Data Lake Subsystem:** Hardened, deterministic, schema-enforced columnar storage tier (`research.datasets`) with full audit corrections.
+  - Centralized `SchemaRegistry` managing versioned PyArrow schemas for trades, quotes, L3 book updates, depth snapshots, market status, instrument definitions, and unified replay events (including full `OrderBookSnapshotMessage` payload fields).
+  - Strict financial typing: 64-bit signed integer tick prices (`pa.int64()`), discrete lot quantities (`pa.uint64()`), nanosecond timestamps, zero floating-point conversions.
+  - Safe, transactional `DatasetWriter` with 3-phase backup publication swap (`target -> backup`, `staging -> target`, purge backup on success, rollback on failure) and non-blocking process file locking (`.lock_{dataset_id}`).
+  - Arrow-native compute kernels for statistics aggregation and partitioning (`pc.unique`, `Table.group_by().aggregate([])`, `Table.filter(mask)`), eliminating full-batch Python dictionary allocations.
+  - Strict path security (`validate_relative_path` and `resolve_partition_path`), rejecting absolute paths, traversal components (`..`), and external symlinks.
+  - Comprehensive `manifest.json` specification (v1.0.0) recording cryptographic SHA-256 checksums, exact row counts, byte sizes, and full provenance (including Phase 07 64-bit `replay_state_digest`).
+  - Streaming `DatasetReader` supporting bounded memory batch iteration (`read_batch_iter()`), column pruning, and partition filtering.
+  - `DatasetCatalog` with automated stale staging and backup cleanup.
+  - Performance: 5.15M records/s write throughput (147 MB/s), 46.5M - 48.5M records/s streaming read throughput on Apple Silicon.
+- **Engineering Quality:** 44/44 Python tests passing, 128/128 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean.
+- **Git State:** Maintained on branch `main` at baseline `9ded754`; working tree preserved uncommitted for user review.
 
 ---
 
-## Active Phase Progress (Phase 07)
+## Active Phase Progress (Phase 08)
 
-- [x] Design canonical ReplayEvent envelope and ordering comparator ([replay_event.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/replay_event.hpp))
-- [x] Implement deterministic ReplayClock without wall-clock dependency ([replay_clock.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/replay_clock.hpp))
-- [x] Create IReplayReader interface and high-performance InMemoryReplayReader ([replay_reader.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/replay_reader.hpp))
-- [x] Define ReplayConfig, ValidationPolicy, ReplayMode, and ReplayStopCondition ([replay_config.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/replay_config.hpp))
-- [x] Define ReplayResult, ReplayStatistics, and 64-bit State Digest ([replay_result.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/replay_result.hpp))
-- [x] Implement ReplayEngine integrating Phase 04 validator and Phase 05/06 OrderBook ([replay_engine.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/replay_engine.hpp))
-- [x] Create deterministic SyntheticReplayFixtureGenerator ([synthetic_generator.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/replay/synthetic_generator.hpp))
-- [x] Implement ReplayClock unit tests ([test_replay_clock.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_clock.cpp))
-- [x] Implement ordering and sorting tests ([test_replay_ordering.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_ordering.cpp))
-- [x] Implement reader lifecycle and exhaustion tests ([test_replay_reader.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_reader.cpp))
-- [x] Implement stream validation tests for gaps, duplicates, out-of-order, corruptions ([test_replay_validation.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_validation.cpp))
-- [x] Implement snapshot baseline and replacement tests ([test_replay_snapshot.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_snapshot.cpp))
-- [x] Implement step mode, max-speed mode, and checkpoint tests ([test_replay_engine.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_engine.cpp))
-- [x] Implement independent engine determinism and reset tests ([test_replay_determinism.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_determinism.cpp))
-- [x] Implement zero steady-state allocation tests with ScopedAllocationGuard ([test_replay_allocation.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_replay_allocation.cpp))
-- [x] Implement full pipeline integration tests ([test_replay_pipeline.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_replay_pipeline.cpp))
-- [x] Create replay benchmark suite covering 9 performance profiles ([benchmark_replay.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_replay.cpp))
-- [x] Author Historical Replay Architecture ([REXI_HISTORICAL_REPLAY.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_HISTORICAL_REPLAY.md)) and ADR ([ADR-0007](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0007-historical-market-replay.md))
-- [x] Author Phase 07 Checkpoint Archive ([PHASE_07_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_07_CHECKPOINT.md))
+- [x] Design dataset domain model, enums, dataclasses, and custom exceptions ([types.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/types.py), [exceptions.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/exceptions.py))
+- [x] Implement semantic `SchemaVersion` and versioned Arrow schemas for Phase 04 / Phase 07 ([schema.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/schema.py))
+- [x] Build thread-safe `SchemaRegistry` with batch validation rules ([schema.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/schema.py))
+- [x] Design `DatasetManifest` specification and SHA-256 integrity verification utilities ([manifest.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/manifest.py))
+- [x] Implement safe, 3-phase transactional `DatasetWriter` with backup and rollback protection ([writer.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/writer.py))
+- [x] Implement memory-bounded streaming `DatasetReader` with partition filtering ([reader.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/reader.py))
+- [x] Implement `DatasetCatalog` discovery and staging maintenance ([catalog.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/catalog.py))
+- [x] Create deterministic fixed-seed `SyntheticMarketDataGenerator` ([generator.py](file:///Users/rexjohnabraham/Documents/REXI/research/datasets/generator.py))
+- [x] Implement schema registry unit tests ([test_dataset_schema.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_dataset_schema.py))
+- [x] Implement manifest serialization and integrity tests ([test_dataset_manifest.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_dataset_manifest.py))
+- [x] Implement writer, reader, and comprehensive Parquet round-trip tests ([test_dataset_writer_reader.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_dataset_writer_reader.py))
+- [x] Implement failure recovery, rollback, and path security tests ([test_dataset_integrity.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_dataset_integrity.py))
+- [x] Implement catalog discovery and staging cleanup tests ([test_dataset_catalog.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_dataset_catalog.py))
+- [x] Implement synthetic generator deterministic reproducibility tests ([test_dataset_synthetic.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_dataset_synthetic.py))
+- [x] Implement end-to-end multi-dataset pipeline integration test ([test_data_lake_pipeline.py](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_data_lake_pipeline.py))
+- [x] Author reproducible benchmark suite ([benchmark_data_lake.py](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_data_lake.py))
+- [x] Author Research Data Lake Architecture ([REXI_RESEARCH_DATA_LAKE.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_RESEARCH_DATA_LAKE.md)) and ADR ([ADR-0008](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0008-research-data-lake.md))
+- [x] Author Phase 08 Checkpoint Archive ([PHASE_08_CHECKPOINT.md](file:///Users/rexjohnabraham/Documents/REXI/docs/checkpoints/PHASE_08_CHECKPOINT.md))
 
 ---
 
-## Next Action Plan (Phase 08)
+## Next Action Plan (Phase 09)
 
-- **Target Phase:** PHASE 08 — Research Data Lake & Ingestion Pipeline
+- **Target Phase:** PHASE 09 — No-Leakage Research Framework
 - **Objectives:**
-  - Build columnar storage interfaces (Parquet / Apache Arrow) for compressed historical market data.
-  - Implement streaming dataset reader adapters feeding into Phase 07 replay interfaces.
-  - Establish dataset cataloging and partitioning conventions.
+  - Build temporal causal backtesting engine strictly operating on historical dataset streams.
+  - Implement point-in-time cross-validation and lookahead bias detector.
+  - Enforce statistical verification pipelines (deflated Sharpe ratio, multiple testing corrections).

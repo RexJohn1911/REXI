@@ -28,6 +28,30 @@ This document tracks all high-level technical decisions, standards, and conventi
 | **DEC-0018** | 2026-10-06 | Simulator | Price-time priority matching with resting-order trade execution pricing | Accepted |
 | **DEC-0019** | 2026-10-06 | Simulator | Deterministic market order exhaustion remainder cancellation policy | Accepted |
 | **DEC-0020** | 2026-10-06 | Simulator | Deterministic single-threaded matching decoupled from wall-clock time | Accepted |
+| **DEC-0021** | 2026-10-07 | Market Data | Flat fixed-layout `MarketDataHeader` with zero dynamic allocation | Accepted |
+| **DEC-0022** | 2026-10-07 | Market Data | Strict continuous sequence numbers with Gap / Duplicate / OutOfOrder detection | Accepted |
+| **DEC-0023** | 2026-10-07 | Market Data | Static fixed-size 16-level `OrderBookSnapshotMessage` layout | Accepted |
+| **DEC-0024** | 2026-10-07 | Market Data | Bitwise incremental checksum validation across network protocol boundaries | Accepted |
+| **DEC-0025** | 2026-10-07 | Order Book | Two-level sparse array + dense price level order book architecture | Accepted |
+| **DEC-0026** | 2026-10-07 | Order Book | Constant-time L2 BBO caching with deferred dirty-flag recomputation | Accepted |
+| **DEC-0027** | 2026-10-07 | Order Book | Monotonic sequence validation with strict gap rejection inside OrderBook | Accepted |
+| **DEC-0028** | 2026-10-07 | Order Book | Bounded static allocation for order book depth snapshots | Accepted |
+| **DEC-0029** | 2026-10-08 | High Perf | Custom contiguous `OrderPool` with freelist recycling | Accepted |
+| **DEC-0030** | 2026-10-08 | High Perf | Index handles (`OrderHandle`) replacing raw C++ pointers in OrderBook | Accepted |
+| **DEC-0031** | 2026-10-08 | High Perf | Intrusive FIFO doubly-linked queues inside `PriceLevel` | Accepted |
+| **DEC-0032** | 2026-10-08 | High Perf | Open-addressing `OrderIdIndex` with backward-shift deletion | Accepted |
+| **DEC-0033** | 2026-10-08 | Replay | Canonical replay record composition over protocol duplication | Accepted |
+| **DEC-0034** | 2026-10-08 | Replay | Strict total ordering contract with feed-sequence primacy | Accepted |
+| **DEC-0035** | 2026-10-08 | Replay | Pure deterministic `ReplayClock` with zero wall-clock coupling | Accepted |
+| **DEC-0036** | 2026-10-08 | Replay | Inline multi-feed sequence cache with zero steady-state allocations | Accepted |
+| **DEC-0037** | 2026-10-08 | Replay | Canonical 64-bit state digest for determinism verification | Accepted |
+| **DEC-0038** | 2026-10-22 | Data Lake | Python PyArrow Research Data Lake Layer | Accepted |
+| **DEC-0039** | 2026-10-22 | Data Lake | Fixed-Point 64-Bit Integer Numerical Precision Invariant | Accepted |
+| **DEC-0040** | 2026-10-22 | Data Lake | Centralized Semantic SchemaRegistry for Market Data and Replay | Accepted |
+| **DEC-0041** | 2026-10-22 | Data Lake | 3-Phase Transactional Publication with Rollback and File Locking | Accepted |
+| **DEC-0042** | 2026-10-22 | Data Lake | Cryptographic SHA-256 Manifest Verification and Replay State Digest Provenance | Accepted |
+| **DEC-0043** | 2026-10-22 | Data Lake | Manifest Path Security, Containment Checks, and Deep Parquet Verification | Accepted |
+| **DEC-0044** | 2026-10-22 | Data Lake | Arrow-Native Partitioning and Statistics Aggregation | Accepted |
 
 ---
 
@@ -39,12 +63,11 @@ This document tracks all high-level technical decisions, standards, and conventi
 - **Reference:** [ADR-0001](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0001-project-architecture.md)
 
 ### DEC-0002: AI Research Layer Safety Boundary
-- **Decision:** AI agents and LLMs will never sit inside the live trading hot path. AI operates solely in the research and hypothesis generation loop:
-  `AI Agent -> Hypothesis -> Experiment -> Quantitative Validation -> Promoted Model -> Risk Engine -> Execution -> Exchange`.
+- **Decision:** AI agents and LLMs will never sit inside the live trading hot path. AI operates solely in the research and hypothesis generation loop.
 - **Rationale:** Unconstrained generative models introduce non-deterministic latencies, hallucinations, and catastrophic tail-risk when placed directly in execution loops.
 
 ### DEC-0003: Cross-Platform Development (macOS to Linux)
-- **Decision:** All core C++ code must compile, run, and pass tests on macOS (Apple Silicon ARM64 and x86_64) using portable C++ standard features. Platform-specific optimizations (e.g., Linux `io_uring`, epoll, CPU core pinning) will reside behind infrastructure abstraction layers.
+- **Decision:** All core C++ code must compile, run, and pass tests on macOS (Apple Silicon ARM64 and x86_64) using portable C++ standard features. Platform-specific optimizations will reside behind infrastructure abstraction layers.
 - **Rationale:** Maximizes developer productivity on macOS workstations while preserving a clean transition to production Linux servers.
 
 ### DEC-0004: Build System Toolchain
@@ -72,7 +95,7 @@ This document tracks all high-level technical decisions, standards, and conventi
 - **Rationale:** Provides identical, one-command builds across developer workstations and CI runners.
 
 ### DEC-0010: C++ Namespace and Style Conventions
-- **Decision:** Root namespace is `rexi`, with subsystem namespaces such as `rexi::core`, `rexi::events`, `rexi::tests`, `rexi::benchmarks`. Formatting strictly enforced via `.clang-format` (Google baseline with C++20 standard).
+- **Decision:** Root namespace is `rexi`, with subsystem namespaces such as `rexi::core`, `rexi::events`, `rexi::tests`, `rexi::benchmarks`. Formatting strictly enforced via `.clang-format`.
 - **Rationale:** Avoids namespace collisions and ensures code formatting consistency across all contributors.
 
 ### DEC-0011: Centralized Python Packaging
@@ -86,7 +109,6 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0013: Standardized 24-Byte Event Header
 - **Decision:** All internal messages encapsulate an 8-byte aligned `EventHeader` containing `EventType`, `SourceId`, flags, monotonic sequence number, and nanosecond monotonic timestamp.
 - **Rationale:** Provides consistent message provenance, chronological ordering, and cache alignment without dynamic allocation.
-- **Reference:** [ADR-0002](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0002-core-event-architecture.md)
 
 ### DEC-0014: Compile-Time Event Traits & Trivial Copyability
 - **Decision:** Event payloads must implement `EventTraits<T>` and satisfy `std::is_trivially_copyable_v<T>` and `std::is_standard_layout_v<T>`.
@@ -98,67 +120,63 @@ This document tracks all high-level technical decisions, standards, and conventi
 
 ### DEC-0016: Direct Lookup Event Dispatcher
 - **Decision:** `EventDispatcher` uses direct table indexing over `EventType` without runtime string lookups or dynamic reflection.
-- **Rationale:** Sub-nanosecond dispatch latency per subscriber and zero dynamic heap allocation on the hot path.
+- **Rationale:** Dispatches events with $O(1)$ determinism and minimal cache pollution.
 
-### DEC-0017: Integer Fixed-Point Price and Quantity Representation
-- **Decision:** Represent prices as integer multiples of ticks (`int64_t Price`) and quantities as integer lots (`uint64_t Quantity`). Floating-point types are strictly forbidden in matching engine comparisons.
-- **Rationale:** Guarantees 100% exact comparisons, eliminates IEEE 754 precision drift, and ensures deterministic order book crossing outcomes.
-- **Reference:** [ADR-0003](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0003-exchange-simulator.md)
+### DEC-0017: Price and Quantity Integer Fixed-Point Units
+- **Decision:** Internal engine represents prices as `int64_t` fixed-point ticks and quantities as `uint64_t` integral units. Floating point (`double`, `float`) is strictly prohibited in matching logic.
+- **Rationale:** Guarantees zero rounding errors, associative arithmetic, and bit-exact reproducibility across platforms.
 
-### DEC-0018: Price-Time Priority Matching with Resting-Order Pricing
-- **Decision:** Matching engine strictly executes highest Bids and lowest Asks first, with FIFO ordering at each price level. Executions across the spread take the resting order's price.
-- **Rationale:** Conforms to standard continuous double auction market microstructure principles while maintaining exact determinism.
+### DEC-0018: Strict Price-Time Priority Matching Engine
+- **Decision:** Resting limit orders match on pure price-time priority. Executions price at the resting limit order's price.
+- **Rationale:** Follows universal exchange microstructure standards and eliminates non-deterministic execution pricing.
 
-### DEC-0019: Deterministic Market Order Liquidity Exhaustion Policy
-- **Decision:** Market orders consume all available opposite-side liquidity. If the opposing book is exhausted before the order is fully filled, the unfilled remainder is cancelled immediately.
-- **Rationale:** Avoids fabricating synthetic liquidity while guaranteeing unambiguous deterministic state progression.
+### DEC-0019: Market Order Unmatched Remainder Cancellation Policy
+- **Decision:** Market orders that cannot be immediately filled against resting liquidity are immediately canceled (IOC-like exhaustion) rather than resting on the book.
+- **Rationale:** Prevents infinite-price resting states and complies with standard financial exchange order handling semantics.
 
-### DEC-0020: Deterministic Single-Threaded Matching Core
-- **Decision:** The core matching engine executes deterministically in a single thread, advancing time strictly through an explicit `SimulationClock` and monotonic sequence numbering (`SequenceNum`).
-- **Rationale:** Eliminates race conditions, thread scheduling jitter, and non-reproducible test failures, ensuring that identical input sequences produce identical output streams.
+### DEC-0020: Discrete Event Decoupled Matching Engine
+- **Decision:** Simulator state transitions occur strictly per discrete event via incoming `source_timestamp` and sequential `OrderCommand`. Wall-clock timers do not drive execution.
+- **Rationale:** Ensures 100% deterministic backtesting, reproducible debugging, and zero dependency on host system load.
 
-### DEC-0021: 40-Byte Standard Aligned Market Data Header
-- **Decision:** Standardize canonical market data message headers at 40 bytes (8-byte aligned) containing protocol version, message type discriminant, flags, venue/feed/instrument IDs, 32-bit checksum, sequence number, source timestamp, and receive timestamp.
-- **Rationale:** Minimizes cache-line footprints, eliminates padding overhead, and guarantees standard binary layout across platforms.
-- **Reference:** [ADR-0004](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0004-market-data-protocol.md)
+### DEC-0021: Flat Fixed-Layout MarketDataHeader
+- **Decision:** All external market data messages share an 8-byte aligned `MarketDataHeader` containing schema version, message type, flags, venue ID, feed ID, instrument ID, checksum, sequence number, and timestamps.
+- **Rationale:** Supports wire-level binary validation, feed identification, and chronological replay sorting without heap allocation.
 
-### DEC-0022: Flat Trivially Copyable Message Payloads with Zero Heap Allocation
-- **Decision:** All market data message payloads (TopOfBook, Trade, OrderBookAdd/Modify/Delete, OrderBookSnapshot, MarketStatus) are flat, standard-layout structs without heap allocations, pointers, or dynamic arrays.
-- **Rationale:** Guarantees zero-allocation compatibility with lock-free SPSC ring buffers and sub-nanosecond copy semantics.
+### DEC-0022: Continuous Sequence Numbers and Gap Detection
+- **Decision:** Every market data channel mandates strictly monotonically increasing sequence numbers, validated by a dedicated `SequenceManager`.
+- **Rationale:** Detects network packet drops, duplicate feeds, and out-of-order deliveries instantly before feeding downstream matching engines.
 
-### DEC-0023: Deterministic 32-bit FNV-1a Checksum Integrity Protocol
-- **Decision:** Provide optional packet integrity verification using 32-bit FNV-1a hash algorithm (`OffsetBasis = 0x811C9DC5`, `Prime = 0x01000193`).
-- **Rationale:** Fast, zero-allocation non-cryptographic checksum verification (<16 ns) with known test vectors for validating packet integrity across network boundaries.
+### DEC-0023: Static Fixed-Size 16-Level OrderBookSnapshotMessage
+- **Decision:** Market data snapshots are fixed at 16 depth levels (`MAX_SNAPSHOT_LEVELS = 16`) using contiguous inline structs.
+- **Rationale:** Completely eliminates dynamic array allocations on snapshot publishing and parsing, preserving ultra-low latency guarantees.
 
-### DEC-0024: Monotonic Sequence Manager with Explicit Gap & Reset Semantics
-- **Decision:** Track message streams per feed using `SequenceManager` with explicit typed outcomes (`Expected`, `Duplicate`, `Gap`, `OutOfOrder`, `ResetRequired`), refusing silent repair of sequence gaps.
-- **Rationale:** Guarantees that feed discontinuities and session resets are transparently observable to downstream order book and replay consumers.
+### DEC-0024: Fast Incremental Checksum Validation
+- **Decision:** Use a 16-bit additive folding checksum algorithm over serialized network payloads with bitwise inversion.
+- **Rationale:** Detects bit-flips and corrupted packets with sub-microsecond overhead before dispatching to trading engines.
 
-### DEC-0025: Price Level Map with Doubly Linked List FIFO Queue & Hash Node Index
-- **Decision:** Implement canonical order book using sorted price level maps (`std::map<Price, PriceLevel>`) with doubly linked list order queues (`std::list<RestingOrder>`) and hash index storing list iterators (`std::unordered_map<OrderId, OrderLocation>`).
-- **Rationale:** Guarantees $O(1)$ order cancellation and $O(1)$ quantity reductions without shifting elements or invalidating other orders' positions, while maintaining strict FIFO queue ordering.
-- **Reference:** [ADR-0005](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0005-order-book.md)
+### DEC-0025: Two-Level Sparse Array + Dense Price Level Order Book Architecture
+- **Decision:** Model the order book using flat price levels with contiguous sparse-to-dense indexing rather than complex pointer trees (`std::map`).
+- **Rationale:** Minimizes pointer chasing and cache misses during frequent best bid/ask lookups and level iterations.
 
-### DEC-0026: Explicit Priority Rules on Order Modification
-- **Decision:** Quantity reductions at the same price preserve FIFO priority in-place; quantity increases lose priority and move the order to the back of the queue; price changes leave the old price level and join the back of the new level.
-- **Rationale:** Mirrors canonical exchange matching engine rules, prevents priority gaming, and provides unambiguous deterministic state transitions.
+### DEC-0026: Constant-Time L2 BBO Caching with Deferred Recomputation
+- **Decision:** Cache top-of-book best bid and best ask levels directly. Mark dirty on order execution/cancellation and recompute only when queried or when best level is exhausted.
+- **Rationale:** Eliminates repeated scans across empty price levels for high-frequency quote readers.
 
-### DEC-0027: Dual Snapshot Model (L2 Aggregated vs Native L3)
-- **Decision:** Distinguish between Phase 04 aggregated L2 snapshots (which reconstruct price levels without fabricating synthetic OrderIds) and native L3 snapshots (which capture explicit resting order identities and queue positions).
-- **Rationale:** Prevents polluting the order book state machine with fake identities while supporting full-depth state checkpointing.
+### DEC-0027: Monotonic Sequence Validation Inside OrderBook
+- **Decision:** `OrderBook` embeds internal sequence checking that halts or rejects updates if sequence gaps occur.
+- **Rationale:** Prevents state corruption caused by missed exchange deltas or packet loss.
 
-### DEC-0028: Configurable Locked/Crossed Market Policy
-- **Decision:** Support explicit `CrossedBookPolicy`: `Reject` (default for matching engine books, rejecting updates crossing the spread) vs `Allow` (for reconstructing external market data feeds where crossed markets temporarily occur).
-- **Rationale:** Keeps matching engine invariant enforcement strict while allowing flexible adaptation to noisy real-world feed streams.
+### DEC-0028: Bounded Static Allocation for Order Book Snapshots
+- **Decision:** Snapshot generation populates fixed-capacity preallocated buffers without dynamic vector reallocation.
+- **Rationale:** Ensures zero heap allocations during market data snapshot capture.
 
-### DEC-0029: Preallocated Contiguous OrderPool with Intrusive Free-List
-- **Decision:** Replace per-order heap allocations in `PriceLevel` with a contiguous, preallocated `OrderPool` of 80-byte `OrderSlot` objects, managed by an intrusive free-list embedded directly in the slot structures.
-- **Rationale:** Eliminates dynamic memory allocation and deallocation during steady-state order insertions and cancellations, resolving CON-0007.
-- **Reference:** [ADR-0006](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0006-high-performance-data-structures.md)
+### DEC-0029: Custom Contiguous OrderPool with Freelist Recycling
+- **Decision:** Implement a custom pool allocator (`OrderPool`) that preallocates a contiguous block of memory for order records and manages unused slots via an intrusive singly-linked freelist.
+- **Rationale:** Eliminates operating system heap allocation jitter (`malloc`/`free`) on order insertions and cancellations, achieving deterministic $O(1)$ allocation times and cache locality.
 
-### DEC-0030: Compact 32-Bit Integer Handles (`OrderHandle`) Over Pointers
-- **Decision:** Use 32-bit unsigned integers (`uint32_t`) as slot handles rather than 64-bit raw pointers or container iterators, with sentinel `kInvalidOrderHandle = 0xFFFFFFFF`.
-- **Rationale:** Reduces handle footprint by 50%, enhances memory density, and ensures handles remain valid across whole-book copy operations without requiring iterator re-pointing.
+### DEC-0030: Index Handles Replacing Raw C++ Pointers
+- **Decision:** Internal order book indices reference order records via 32-bit `OrderHandle` indices rather than raw 64-bit pointers.
+- **Rationale:** Halves pointer memory footprint, eliminates 64-bit pointer overhead in cache lines, improves cache capacity, and ensures handles remain valid across whole-book copy operations without requiring iterator re-pointing.
 
 ### DEC-0031: Intrusive FIFO Doubly-Linked Queues Inside PriceLevel
 - **Decision:** Each `PriceLevel` maintains 32-bit `head_` and `tail_` handles, using intrusive `prev` and `next` links embedded directly within the pool slots to maintain strict price-time queue priority.
@@ -171,7 +189,6 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0033: Canonical Replay Record Composition Over Protocol Duplication
 - **Decision:** Encapsulate historical events in `ReplayEvent` using canonical Phase 04 `MarketDataHeader` and typed `std::variant` payloads rather than creating a separate replay-specific protocol hierarchy.
 - **Rationale:** Eliminates protocol divergence, ensures wire/replay parity, and maintains a single canonical event path into the order book.
-- **Reference:** [ADR-0007](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0007-historical-market-replay.md)
 
 ### DEC-0034: Strict Total Ordering Contract with Feed-Sequence Primacy
 - **Decision:** Implement `ReplayEventComparator` enforcing total ordering: authoritative feed sequence number first, followed by source timestamp, receive timestamp, feed identifiers, and stable input index.
@@ -188,3 +205,40 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0037: Canonical 64-Bit State Digest for Determinism Verification
 - **Decision:** Implement `compute_state_digest()` combining 64-bit FNV-1a hashing over sorted price levels, resting order FIFO queues, clock states, and counters without hashing pointers or container layouts.
 - **Rationale:** Enables automated bit-for-bit regression testing across compiler toolchains, optimization levels, and runs.
+
+### DEC-0038: Python PyArrow Research Data Lake Layer
+- **Decision:** Implement the primary quantitative Research Data Lake under `research/datasets/` using Apache Arrow / Parquet (`pyarrow`) while keeping the native C++ execution engine free of Python runtime dependencies.
+- **Rationale:** Leverages the rich columnar ecosystem for research without compromising C++ zero-allocation low-latency production execution (`CON-0004`).
+- **Reference:** [ADR-0008](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0008-research-data-lake.md)
+
+### DEC-0039: Fixed-Point 64-Bit Integer Numerical Precision Invariant
+- **Decision:** Financial prices are strictly encoded as 64-bit signed integers (`pa.int64()`) representing discrete tick units; quantities are encoded as 64-bit unsigned integers (`pa.uint64()`) representing lot units; timestamps are 64-bit nanosecond integers. Floating-point conversions are prohibited.
+- **Rationale:** Prevents IEEE-754 rounding drift and guarantees 100% precision parity with native C++ fixed-point order book calculations.
+
+### DEC-0040: Centralized Semantic SchemaRegistry for Market Data and Replay
+- **Decision:** Establish a thread-safe `SchemaRegistry` managing versioned PyArrow schemas for trades, quotes, L3 book deltas, depth snapshots, market status, instrument definitions, and unified replay event envelopes with backward compatibility validation rules.
+- **Rationale:** Prevents schema divergence, guarantees strict type enforcement, and rejects incompatible schemas before writing or reading.
+
+### DEC-0041: 3-Phase Transactional Publication with Rollback and File Locking
+- **Decision:** Overwrite publication executes a 3-phase transactional backup swap (`target -> backup`, `staging -> target`, purge backup on success, rollback on failure) protected by a non-blocking process file lock (`.lock_{dataset_id}`). Destructive pre-publish deletions (`rmtree`) are strictly prohibited.
+- **Rationale:** Solves POSIX non-empty directory rename restrictions (`CON-0009`) while ensuring previously valid datasets are never deleted or corrupted if replacement publication encounters a disk or system failure. Active readers with open file descriptors continue uninterrupted.
+
+### DEC-0042: Cryptographic SHA-256 Manifest Verification and Replay State Digest Provenance
+- **Decision:** Every completed dataset manifest records chunked SHA-256 checksums per partition file and tracks full lineage including Phase 07 64-bit `replay_state_digest`.
+- **Rationale:** Delivers tamper-evident integrity audits (`verify_integrity()`) and bit-for-bit reproducible provenance linking research datasets directly to simulator/replay states.
+
+### DEC-0043: Manifest Path Security, Containment Checks, and Deep Parquet Verification
+- **Decision:** Deserialization and reading strictly sanitize partition paths (`validate_relative_path` and `resolve_partition_path`), rejecting absolute paths, traversal components (`..`), and external symlinks. Manifest deserialization rejects duplicate partition entries and count/size inconsistencies. `verify_integrity()` performs deep Parquet file inspection against internal row-count metadata.
+- **Rationale:** Prevents arbitrary file reads/writes outside dataset boundaries and guarantees manifest truthfulness beyond physical file checksums.
+
+### DEC-0044: Arrow-Native Partitioning and Statistics Aggregation
+- **Decision:** Dataset statistics aggregation and row-wise partitioning are implemented directly via Arrow C++ compute kernels (`pc.unique`, `Table.group_by().aggregate([])`, `Table.filter(mask)`), eliminating full-batch Python dictionary allocations (`to_pylist()`).
+- **Rationale:** Binds memory allocations strictly to partition cardinalities rather than dataset batch row counts, delivering write throughput exceeding 5.1M records/s (147 MB/s).
+
+### DEC-0045: Coordinated Process Locking Protocol Across Writers, Readers, Recovery, and Cleanup
+- **Decision:** All write, recovery, and cleanup mutations require acquiring an advisory non-blocking process file lock (`DatasetLock`, `fcntl.LOCK_EX | fcntl.LOCK_NB`) on `.lock_{dataset_id}`. Empty lock files intentionally persist on disk to eliminate inode deletion races; active status is evaluated strictly via non-blocking lock acquisition tests (`DatasetLock.is_active`). Recovery and stale staging cleanup skip datasets with actively held locks, completely preventing races with concurrent publishing writers.
+- **Rationale:** Ensures crash recovery and automated maintenance never race with or destroy active publication transactions, prevents reader false-positives on stale lock files, and provides idempotent recovery without deleting valid backups.
+
+### DEC-0046: Replay Schema Immutability (V1) and Lossless Depth Snapshot Fidelity (V2)
+- **Decision:** `REPLAY_EVENT_SCHEMA_V1` (`v1.0.0`, 32 columns) is preserved strictly immutable for backward compatibility. `REPLAY_EVENT_SCHEMA_V2` (`v1.1.0`, 37 columns) introduces full `OrderBookSnapshotMessage` payload fidelity (`last_included_sequence`, `bid_levels_count`, `ask_levels_count`, and nested struct lists `bids` and `asks` with `price`, `quantity`, `order_count`). Readers transparently detect schema versions from `manifest.json`.
+- **Rationale:** Honors schema versioning immutability: snapshot payloads were never recorded in V1 datasets and cannot be losslessly reconstructed from V1 data. V2 provides 100% bit-for-bit replay book reconstruction.

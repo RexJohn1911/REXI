@@ -32,8 +32,8 @@
 - [x] **PHASE 07 — Historical Market Replay**
   - Deterministic historical replay engine, strict total ordering contract, zero wall-clock dependency ReplayClock, Phase 04 validation and sequence tracking, Phase 05/06 OrderBook integration, zero steady-state heap allocations, canonical 64-bit state digest.
 
-- [ ] **PHASE 08 — Research Data Lake**
-  - Parquet/Arrow tick-level time series storage, partitioned datasets, point-in-time reference data pipelines.
+- [x] **PHASE 08 — Research Data Lake**
+  - Parquet/Arrow tick-level time series storage, partitioned datasets, SchemaRegistry, DatasetWriter with atomic staging, streaming DatasetReader, manifest cryptographic verification.
 
 - [ ] **PHASE 09 — No-Leakage Research Framework**
   - Temporal causal backtesting engine, point-in-time cross-validation, lookahead detector, statistical verification pipeline.
