@@ -1,7 +1,8 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
 **System:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 10 (Microstructure Feature Engine) — COMPLETED
+**Current Phase:** PHASE 11 (Statistical Strategy Laboratory) — COMPLETED
+**Next Phase:** PHASE 12 (Market Making Engine)
 **Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
@@ -41,8 +42,8 @@
 - [x] **PHASE 10 — Microstructure Feature Engine**
   - Order Flow Imbalance (OFI), Volume-Synchronized Probability of Toxicity (VPIN), Micro-price, Roll effective spread, Multi-level Depth Imbalance, Realized Volatility, zero-allocation C++ hot path, PyArrow schema, Phase 09 causal leakage integration.
 
-- [ ] **PHASE 11 — Statistical Strategy Laboratory**
-  - Pairs trading, cointegration engines, Ornstein-Uhlenbeck mean reversion, statistical arbitrage signal generators.
+- [x] **PHASE 11 — Statistical Strategy Laboratory**
+  - Strategy contracts and interfaces, 5-point temporal coordinate chain, target/barrier generators with de Prado purging integration, deterministic backtesting engine, dated regulatory fee accounting (SEC Section 31, FINRA TAF, T+1 settlement).
 
 - [ ] **PHASE 12 — Market Making Engine**
   - Avellaneda-Stoikov inventory models, symmetric/asymmetric quote skewing, adverse selection guards, post-only quoting.

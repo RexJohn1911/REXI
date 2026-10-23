@@ -1,45 +1,48 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 10 — Microstructure Feature Engine
+**Current Phase:** PHASE 11 — Statistical Strategy Laboratory
 **Phase Status:** COMPLETED & VALIDATION-PASSED
-**Next Phase:** PHASE 11 — Statistical Strategy Laboratory
-**Last Updated:** 2026-10-22
+**Next Phase:** PHASE 12 — Market Making Engine
+**Last Updated:** 2026-10-23
 
 ---
 
 ## Current System State Summary
 
-- **Microstructure Feature Engine Subsystem:** High-performance, deterministic microstructure feature calculation layer operating under the two-world architecture:
-  - C++ hot-path streaming engine (`core/include/rexi/microstructure/`): zero steady-state heap allocations, contiguous fixed circular ring buffers (`FixedRingBuffer<T, N>`), sub-35-nanosecond update latency (`16.0ns` quote update, `33.2ns` trade update, `17.7ns` depth update), strict temporal monotonicity enforcement, explicit handling and drop counters for out-of-order events.
-  - Python quantitative research engine & pipeline (`research/features/`): vectorized and streaming PyArrow table processing, canonical `MICROSTRUCTURE_FEATURES_SCHEMA_V1` schema, integration with Phase 08 Data Lake `DatasetReader` and `DatasetWriter`, and point-in-time causal validation via Phase 09 `LookaheadDetector`.
-  - Comprehensive feature coverage: Level 1 top of book (spread, relative spread, mid-price, micro-price/weighted mid, top-of-book imbalance), Level 2 multi-level depth imbalance ($K=5$), Cont et al. (2014) Order Flow Imbalance (OFI) instant and rolling, trade flow metrics (signed volume, trade flow imbalance, rolling VWAP), short-horizon mid returns and sample realized volatility, Roll (1984) effective spread, and Easley et al. (2012) VPIN with deterministic bucket boundary splitting.
-  - Explicit validity gating: Every feature possesses a corresponding boolean validity flag (`has_bid`, `has_ask`, `is_crossed`, `has_spread`, `has_mid`, `has_weighted_mid`, `has_book_imbalance`, `has_depth_imbalance`, `has_instant_ofi`, `has_rolling_ofi`, `has_trade`, `has_trade_flow`, `has_vwap`, `has_log_return`, `has_realized_volatility`, `has_roll_spread`, `has_vpin`). Missing quotes, crossed/locked books, insufficient history, or non-negative Roll autocovariances are strictly gated False and never silently defaulted to zero.
+- **Statistical Strategy Laboratory Subsystem:** Quantitative strategy research and deterministic backtesting framework operating under the two-world architecture:
+  - Strategy contracts and causal invariants (`research/strategies/types.py`, `research/strategies/base.py`): strict 5-point temporal coordinate chain ($T_{\text{event}} \le T_{\text{available}} \le T_{\text{decision}} \le T_{\text{actionable}} \le T_{\text{fill}}$), immutable signal, order intent, fill record, and position state structures, `StrategyBase` contract, and baseline `FlatBenchmarkStrategy`.
+  - Forward target generation (`research/strategies/targets.py`): mathematical fixed-horizon log returns, de Prado triple-barrier path labeling with vertical expiration barriers, and closed `LabelInformationInterval` metadata for integration with Phase 09 purging.
+  - Deterministic event-driven backtesting engine (`research/backtesting/engine.py`, `research/backtesting/exceptions.py`): causal execution, displayed-depth liquidity consumption with partial fill support, stale-quote rejection, crossed/locked book rejection, cash ledger and mark-to-market position accounting.
+  - Transaction costs and regulatory accounting (`research/backtesting/costs.py`): decomposed cost attribution (half-spread, linear slippage, temporary impact, venue fees), SEC Section 31 dated fee schedules with Rule 31 charge-date lookup, FINRA TAF multi-year equity schedules pursuant to SR-FINRA-2026-020 (Release No. 34-106410), U.S. Eastern timezone normalization, and strict separation of FINRA 20:00:00 ET TRF reporting deadlines from statutory T+1 settlement dates.
+- **Microstructure Feature Engine Subsystem:** High-performance, deterministic microstructure feature calculation layer operating under C++ hot-path streaming and Python research pipeline (`research/features/`).
 - **No-Leakage Research Framework Subsystem:** Point-in-time causal partitioning, label horizon purging, targeted post-test embargo, and lookahead verification engine (`research.leakage`).
 - **Research Data Lake Subsystem:** Hardened, deterministic, schema-enforced columnar storage tier (`research.datasets`).
-- **Engineering Quality:** 120/120 Python tests passing, 142/142 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean, `git diff --check` clean.
-- **Git State:** Maintained on branch `main`; working tree preserved uncommitted for user review.
+- **Engineering Quality:** 164/164 Python tests passing, 142/142 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean, `git diff --check` clean.
+- **Git State:** Maintained on branch `main`.
 
 ---
 
-## Active Phase Progress (Phase 10)
+## Active Phase Progress (Phase 11)
 
-- [x] Design C++ microstructure types, fixed ring buffer, and feature engine ([types.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/microstructure/types.hpp), [rolling_window.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/microstructure/rolling_window.hpp), [feature_engine.hpp](file:///Users/rexjohnabraham/Documents/REXI/core/include/rexi/microstructure/feature_engine.hpp))
-- [x] Implement C++ unit tests covering L1, L2 depth, OFI, trade flow, volatility, Roll spread, VPIN, temporal order, and steady-state zero heap allocation ([test_microstructure_features.cpp](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_microstructure_features.cpp))
-- [x] Implement C++ microbenchmarks verifying sub-50ns update latency ([benchmark_microstructure.cpp](file:///Users/rexjohnabraham/Documents/REXI/benchmarks/benchmark_microstructure.cpp))
-- [x] Design Python research types, configurations, and canonical PyArrow schema ([types.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/types.py), [schema.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/schema.py))
-- [x] Implement Python MicrostructureFeatureEngine streaming and table extraction ([engine.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/engine.py))
-- [x] Implement Python MicrostructureFeaturePipeline with Phase 08 Data Lake and Phase 09 Leakage safeguards ([pipeline.py](file:///Users/rexjohnabraham/Documents/REXI/research/features/pipeline.py))
-- [x] Implement Python unit tests ([test_microstructure_features.py](file:///Users/rexjohnabraham/Documents/REXI/tests/unit/test_microstructure_features.py)) and integration tests ([test_feature_pipeline.py](file:///Users/rexjohnabraham/Documents/REXI/tests/integration/test_feature_pipeline.py))
-- [x] Author Microstructure Feature Engine Architecture ([REXI_MICROSTRUCTURE_FEATURE_ENGINE.md](file:///Users/rexjohnabraham/Documents/REXI/docs/architecture/REXI_MICROSTRUCTURE_FEATURE_ENGINE.md)) and ADR ([ADR-0010](file:///Users/rexjohnabraham/Documents/REXI/docs/decisions/ADR-0010-microstructure-feature-engine.md))
-- [x] Update project decisions log ([REXI_DECISIONS.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_DECISIONS.md)), known issues ([REXI_KNOWN_ISSUES.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_KNOWN_ISSUES.md)), and roadmap ([REXI_ROADMAP.md](file:///Users/rexjohnabraham/Documents/REXI/REXI_ROADMAP.md))
+- [x] Design strategy contracts and 5-point temporal coordinate chain ([types.py](research/strategies/types.py))
+- [x] Implement abstract StrategyBase and FlatBenchmarkStrategy ([base.py](research/strategies/base.py))
+- [x] Implement TargetGenerator with de Prado triple-barrier and fixed-horizon returns ([targets.py](research/strategies/targets.py))
+- [x] Implement dated transaction cost model with SEC Section 31 and FINRA TAF schedules ([costs.py](research/backtesting/costs.py))
+- [x] Implement DeterministicBacktestEngine with displayed-depth consumption and causal fill execution ([engine.py](research/backtesting/engine.py))
+- [x] Implement strategy types and temporal causality unit tests ([test_strategy_types_and_temporal.py](tests/unit/test_strategy_types_and_temporal.py))
+- [x] Implement backtest costs, settlement calendar, and engine unit tests ([test_backtest_costs_and_engine.py](tests/unit/test_backtest_costs_and_engine.py))
+- [x] Author Statistical Strategy Laboratory Architecture ([REXI_STATISTICAL_STRATEGY_LABORATORY.md](docs/architecture/REXI_STATISTICAL_STRATEGY_LABORATORY.md)) and ADR ([ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md))
+- [x] Author Phase 11 Checkpoint ([PHASE_11_CHECKPOINT.md](docs/checkpoints/PHASE_11_CHECKPOINT.md))
+- [x] Update project decisions log ([REXI_DECISIONS.md](REXI_DECISIONS.md)), known issues ([REXI_KNOWN_ISSUES.md](REXI_KNOWN_ISSUES.md)), and roadmap ([REXI_ROADMAP.md](REXI_ROADMAP.md))
 
 ---
 
-## Next Action Plan (Phase 11)
+## Next Action Plan (Phase 12)
 
-- **Target Phase:** PHASE 11 — Statistical Strategy Laboratory
+- **Target Phase:** PHASE 12 — Market Making Engine
 - **Objectives:**
-  - Pairs trading and cointegration testing framework.
-  - Ornstein-Uhlenbeck parameter estimation and mean-reversion modeling.
-  - Statistical arbitrage signal generators consuming Phase 10 microstructure features.
+  - Avellaneda-Stoikov optimal inventory models.
+  - Symmetric and asymmetric quote skewing based on inventory risk and book imbalance.
+  - Adverse selection guards and toxicity filters consuming Phase 10 VPIN and OFI.
+  - Post-only quoting mechanisms with passive queue preservation.

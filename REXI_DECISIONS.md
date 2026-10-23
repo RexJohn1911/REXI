@@ -286,3 +286,23 @@ This document tracks all high-level technical decisions, standards, and conventi
 ### DEC-0054: Canonical Microstructure Formulations
 - **Decision:** Formulations follow established quantitative microstructure literature: Cont, Kukanov & Stoikov (2014) for Order Flow Imbalance (OFI); Roll (1984) for effective spread via serial covariance; Easley, Lopez de Prado & O'Hara (2012) for Volume-Synchronized Probability of Toxicity (VPIN); and continuous rolling VWAP/trade flow imbalance.
 - **Rationale:** Ensures mathematical rigor, verifiable correctness, and deterministic equivalence between streaming and batched research evaluations.
+
+### DEC-0055: 5-Point Temporal Coordinate Chain Invariant
+- **Decision:** All strategy signals, order intents, and executions strictly enforce the 5-point temporal inequality $T_{\text{event}} \le T_{\text{available}} \le T_{\text{decision}} \le T_{\text{actionable}} \le T_{\text{fill}}$. Any non-monotonic time inversion raises an explicit `TemporalOrderError`.
+- **Rationale:** Prevents subtle lookahead leakage across research signal generation and accurately reflects real-world network, computation, and routing latencies.
+- **Reference:** [ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md)
+
+### DEC-0056: Deterministic Backtest Liquidity Consumption and Displayed-Depth Gating
+- **Decision:** Fills are executed strictly against displayed top-of-book depth with configurable partial fill semantics. Orders exceeding available liquidity either partially fill or raise `InsufficientLiquidityError`. Stale quotes ($T_{\text{fill}} - T_{\text{quote}} > \tau_{\text{stale}}$) and crossed/locked markets are strictly rejected.
+- **Rationale:** Eliminates unrealistic assumptions of infinite liquidity at top-of-book and prevents phantom fills during anomalous market conditions.
+- **Reference:** [ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md)
+
+### DEC-0057: Dated Regulatory Fee Schedules and Rule 31 Charge-Date Disambiguation
+- **Decision:** Regulatory costs are calculated via versioned, dated rate schedules for SEC Section 31 and FINRA TAF rather than static constants. SEC Section 31 fees apply strictly to covered equity sales using the transaction's SEC charge date (settlement date for agency-cleared trades under 17 CFR § 240.31(a)(3)), and FINRA TAF applies to covered equity sales using the trade date.
+- **Rationale:** Accurately reflects historical fee structures (such as the FY25 zero-fee interval and multi-year FINRA TAF rate tiers) without introducing historical bias or date confusion.
+- **Reference:** [ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md)
+
+### DEC-0058: FINRA 8:00 p.m. ET Trade Reporting vs. Statutory Settlement Separation
+- **Decision:** The FINRA 20:00:00 ET trade reporting cutoff (Rules 6380A/6380B) strictly governs report submission timing (`is_as_of_reporting = True` and next-business-day 08:15 a.m. deadline) and does not modify statutory T+1 settlement under SEC Rule 15c6-1(a). Trades executed after 20:00:00 ET retain their trade date and settle 1 business day later.
+- **Rationale:** Prevents conflating regulatory trade reporting obligations with clearing agency settlement dates.
+- **Reference:** [ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md)
