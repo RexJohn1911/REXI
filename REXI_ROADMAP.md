@@ -1,8 +1,8 @@
 # REXI 32-Phase Roadmap — Phase 00 through Phase 31
 
 **System:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 11 (Statistical Strategy Laboratory) — COMPLETED
-**Next Phase:** PHASE 12 (Market Making Engine)
+**Current Phase:** PHASE 12 (Market Making Engine) — COMPLETED
+**Next Phase:** PHASE 13 (Short-Horizon Alpha Engine)
 **Total Phases:** 32 (Phase 00 through Phase 31)
 
 ---
@@ -45,8 +45,8 @@
 - [x] **PHASE 11 — Statistical Strategy Laboratory**
   - Strategy contracts and interfaces, 5-point temporal coordinate chain, target/barrier generators with de Prado purging integration, deterministic backtesting engine, dated regulatory fee accounting (SEC Section 31, FINRA TAF, T+1 settlement).
 
-- [ ] **PHASE 12 — Market Making Engine**
-  - Avellaneda-Stoikov inventory models, symmetric/asymmetric quote skewing, adverse selection guards, post-only quoting.
+- [x] **PHASE 12 — Market Making Engine**
+  - Avellaneda-Stoikov inventory reservation pricing, optimal and fixed half-spreads, tick-size-aware rounding, adverse selection guards (stale quotes, wide spread, thin depth, volatility, OFI/VPIN), asymmetric inventory risk management, passive post-only order intent generation.
 
 - [ ] **PHASE 13 — Short-Horizon Alpha Engine**
   - Tick-level momentum, cross-asset lead-lag predictors, book imbalance fast alphas, signal combination weights.

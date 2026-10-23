@@ -306,3 +306,23 @@ This document tracks all high-level technical decisions, standards, and conventi
 - **Decision:** The FINRA 20:00:00 ET trade reporting cutoff (Rules 6380A/6380B) strictly governs report submission timing (`is_as_of_reporting = True` and next-business-day 08:15 a.m. deadline) and does not modify statutory T+1 settlement under SEC Rule 15c6-1(a). Trades executed after 20:00:00 ET retain their trade date and settle 1 business day later.
 - **Rationale:** Prevents conflating regulatory trade reporting obligations with clearing agency settlement dates.
 - **Reference:** [ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md)
+
+### DEC-0059: Avellaneda-Stoikov Reservation Pricing with Dimensional Units
+- **Decision:** Market-maker pricing implements the canonical Avellaneda-Stoikov reservation price $r(s, q, \tau) = s - q \gamma \sigma^2 \tau$. The inventory penalty $q \gamma \sigma^2 \tau$ strictly adheres to dollar units ($\$$). Long inventory ($q > 0$) skews quotes downward, and short inventory ($q < 0$) skews quotes upward.
+- **Rationale:** Ensures mathematical rigor and eliminates directional errors or dimensional inconsistencies in inventory risk management.
+- **Reference:** [ADR-0012](docs/decisions/ADR-0012-market-making-engine.md)
+
+### DEC-0060: Tick-Size Aware Price Rounding and Anti-Crossing Invariants
+- **Decision:** Raw quote prices round to discrete tick increments according to side: bids round down ($\lfloor p / \Delta \rfloor \Delta$), asks round up ($\lceil p / \Delta \rceil \Delta$). The engine strictly enforces $p_{\text{bid}} < p_{\text{ask}}$; if tick rounding locks or crosses quotes, the ask is automatically widened by one tick increment.
+- **Rationale:** Preserves passive queue priority and eliminates self-crossing or accidental liquidity-taking fills.
+- **Reference:** [ADR-0012](docs/decisions/ADR-0012-market-making-engine.md)
+
+### DEC-0061: Asymmetric Risk-Mitigating Quoting Under Inventory Bounds
+- **Decision:** When inventory reaches or breaches a position limit ($q \ge q_{\text{max}}$ or $q \le -q_{\text{max}}$), the engine strictly suppresses only the side that would increase risk. The opposite, risk-reducing side remains active to allow natural inventory rebalancing.
+- **Rationale:** Prevents liquidity freezing when at inventory limits, facilitating orderly risk reduction.
+- **Reference:** [ADR-0012](docs/decisions/ADR-0012-market-making-engine.md)
+
+### DEC-0062: Microstructure Toxic Flow Adverse-Selection Guards
+- **Decision:** Adverse-selection guards monitor Cont et al. (2014) Order Flow Imbalance (OFI), Level 2 Depth Imbalance, and Easley et al. (2012) VPIN. Asymmetric toxic flow suppresses quotes on the vulnerable side to protect the strategy against informed front-running.
+- **Rationale:** Defends passive market makers from adverse selection during sharp microstructure imbalances.
+- **Reference:** [ADR-0012](docs/decisions/ADR-0012-market-making-engine.md)

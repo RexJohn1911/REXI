@@ -1,48 +1,50 @@
 # REXI State Tracker
 
 **Project:** REXI — Real-time EXecution & Intelligence
-**Current Phase:** PHASE 11 — Statistical Strategy Laboratory
+**Current Phase:** PHASE 12 — Market Making Engine
 **Phase Status:** COMPLETED & VALIDATION-PASSED
-**Next Phase:** PHASE 12 — Market Making Engine
+**Next Phase:** PHASE 13 — Short-Horizon Alpha Engine
 **Last Updated:** 2026-10-23
 
 ---
 
 ## Current System State Summary
 
-- **Statistical Strategy Laboratory Subsystem:** Quantitative strategy research and deterministic backtesting framework operating under the two-world architecture:
-  - Strategy contracts and causal invariants (`research/strategies/types.py`, `research/strategies/base.py`): strict 5-point temporal coordinate chain ($T_{\text{event}} \le T_{\text{available}} \le T_{\text{decision}} \le T_{\text{actionable}} \le T_{\text{fill}}$), immutable signal, order intent, fill record, and position state structures, `StrategyBase` contract, and baseline `FlatBenchmarkStrategy`.
-  - Forward target generation (`research/strategies/targets.py`): mathematical fixed-horizon log returns, de Prado triple-barrier path labeling with vertical expiration barriers, and closed `LabelInformationInterval` metadata for integration with Phase 09 purging.
-  - Deterministic event-driven backtesting engine (`research/backtesting/engine.py`, `research/backtesting/exceptions.py`): causal execution, displayed-depth liquidity consumption with partial fill support, stale-quote rejection, crossed/locked book rejection, cash ledger and mark-to-market position accounting.
-  - Transaction costs and regulatory accounting (`research/backtesting/costs.py`): decomposed cost attribution (half-spread, linear slippage, temporary impact, venue fees), SEC Section 31 dated fee schedules with Rule 31 charge-date lookup, FINRA TAF multi-year equity schedules pursuant to SR-FINRA-2026-020 (Release No. 34-106410), U.S. Eastern timezone normalization, and strict separation of FINRA 20:00:00 ET TRF reporting deadlines from statutory T+1 settlement dates.
+- **Market Making Engine Subsystem:** Research-grade, deterministic market-making strategy engine operating under the quantitative two-world architecture:
+  - Strongly typed market-making domain models (`research/market_making/types.py`): validated data models (`MarketQuoteSnapshot`, `InventoryState`, `QuoteIntent`, `QuoteDecision`), fine-grained `QuoteSuppressionReason` taxonomy, and `MarketMakingConfig`.
+  - Avellaneda-Stoikov reservation pricing (`research/market_making/model.py`): dimensionally consistent $r(s, q, \tau) = s - q \gamma \sigma^2 \tau$, directional inventory skew (long lowers reservation price, short raises reservation price), closed-form optimal half-spread $\delta^* = \frac{1}{\gamma} \ln(1 + \frac{\gamma}{\kappa})$, tick-size rounding (bids floor, asks ceil), and anti-crossing invariant ($p_{\text{bid}} < p_{\text{ask}}$).
+  - Adverse-selection and market-quality guards (`research/market_making/guards.py`): `StaleQuoteGuard`, `SpreadGuard`, `DepthGuard`, `VolatilityGuard`, `MicrostructureGuard` (OFI, depth imbalance, VPIN), and `InventoryLimitGuard` with asymmetric risk mitigation (risk-reducing quotes remain active).
+  - Strategy lifecycle and Phase 11 integration (`research/market_making/engine.py`): `MarketMakingStrategy(BaseStrategy)` with streaming callbacks (`on_quote`, `on_features`, `on_fill`) and table-based signal generation (`generate_signals`), passive limit order intent generation (`OrderIntent`, `is_post_only=True`), and sub-6 µs decision latency (~184,000 decisions/sec).
+- **Statistical Strategy Laboratory Subsystem:** Quantitative strategy research and deterministic backtesting framework (`research/strategies/`, `research/backtesting/`).
 - **Microstructure Feature Engine Subsystem:** High-performance, deterministic microstructure feature calculation layer operating under C++ hot-path streaming and Python research pipeline (`research/features/`).
 - **No-Leakage Research Framework Subsystem:** Point-in-time causal partitioning, label horizon purging, targeted post-test embargo, and lookahead verification engine (`research.leakage`).
 - **Research Data Lake Subsystem:** Hardened, deterministic, schema-enforced columnar storage tier (`research.datasets`).
-- **Engineering Quality:** 164/164 Python tests passing, 142/142 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean, `git diff --check` clean.
+- **Engineering Quality:** 207/207 Python tests passing, 142/142 C++ GoogleTests passing across Debug and Release builds, Ruff 100% clean, strict Mypy 100% clean, `git diff --check` clean.
 - **Git State:** Maintained on branch `main`.
 
 ---
 
-## Active Phase Progress (Phase 11)
+## Active Phase Progress (Phase 12)
 
-- [x] Design strategy contracts and 5-point temporal coordinate chain ([types.py](research/strategies/types.py))
-- [x] Implement abstract StrategyBase and FlatBenchmarkStrategy ([base.py](research/strategies/base.py))
-- [x] Implement TargetGenerator with de Prado triple-barrier and fixed-horizon returns ([targets.py](research/strategies/targets.py))
-- [x] Implement dated transaction cost model with SEC Section 31 and FINRA TAF schedules ([costs.py](research/backtesting/costs.py))
-- [x] Implement DeterministicBacktestEngine with displayed-depth consumption and causal fill execution ([engine.py](research/backtesting/engine.py))
-- [x] Implement strategy types and temporal causality unit tests ([test_strategy_types_and_temporal.py](tests/unit/test_strategy_types_and_temporal.py))
-- [x] Implement backtest costs, settlement calendar, and engine unit tests ([test_backtest_costs_and_engine.py](tests/unit/test_backtest_costs_and_engine.py))
-- [x] Author Statistical Strategy Laboratory Architecture ([REXI_STATISTICAL_STRATEGY_LABORATORY.md](docs/architecture/REXI_STATISTICAL_STRATEGY_LABORATORY.md)) and ADR ([ADR-0011](docs/decisions/ADR-0011-statistical-strategy-laboratory.md))
-- [x] Author Phase 11 Checkpoint ([PHASE_11_CHECKPOINT.md](docs/checkpoints/PHASE_11_CHECKPOINT.md))
+- [x] Design market-making types, suppression taxonomy, and config ([types.py](research/market_making/types.py))
+- [x] Implement Avellaneda-Stoikov reservation pricing and tick rounding ([model.py](research/market_making/model.py))
+- [x] Implement adverse-selection, quality, and inventory guards ([guards.py](research/market_making/guards.py))
+- [x] Implement MarketMakingStrategy and Phase 11 BaseStrategy integration ([engine.py](research/market_making/engine.py))
+- [x] Implement market-making model unit tests ([test_market_making_model.py](tests/unit/test_market_making_model.py))
+- [x] Implement market-making guards unit tests ([test_market_making_guards.py](tests/unit/test_market_making_guards.py))
+- [x] Implement market-making strategy lifecycle tests ([test_market_making_strategy.py](tests/unit/test_market_making_strategy.py))
+- [x] Implement performance throughput benchmark ([benchmark_market_making.py](benchmarks/benchmark_market_making.py))
+- [x] Author Market Making Engine Architecture ([REXI_MARKET_MAKING_ENGINE.md](docs/architecture/REXI_MARKET_MAKING_ENGINE.md)) and ADR ([ADR-0012](docs/decisions/ADR-0012-market-making-engine.md))
+- [x] Author Phase 12 Checkpoint ([PHASE_12_CHECKPOINT.md](docs/checkpoints/PHASE_12_CHECKPOINT.md))
 - [x] Update project decisions log ([REXI_DECISIONS.md](REXI_DECISIONS.md)), known issues ([REXI_KNOWN_ISSUES.md](REXI_KNOWN_ISSUES.md)), and roadmap ([REXI_ROADMAP.md](REXI_ROADMAP.md))
 
 ---
 
-## Next Action Plan (Phase 12)
+## Next Action Plan (Phase 13)
 
-- **Target Phase:** PHASE 12 — Market Making Engine
+- **Target Phase:** PHASE 13 — Short-Horizon Alpha Engine
 - **Objectives:**
-  - Avellaneda-Stoikov optimal inventory models.
-  - Symmetric and asymmetric quote skewing based on inventory risk and book imbalance.
-  - Adverse selection guards and toxicity filters consuming Phase 10 VPIN and OFI.
-  - Post-only quoting mechanisms with passive queue preservation.
+  - Tick-level momentum and mean-reversion alpha factors.
+  - Cross-asset lead-lag predictors and latency arbitrage signals.
+  - Book imbalance and trade flow fast alphas.
+  - Multi-factor signal combination and dynamic alpha weights.
